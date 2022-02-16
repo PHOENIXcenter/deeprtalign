@@ -15,7 +15,7 @@ from deeprtalign import collect_mass_alignment
 import argparse
 import shutil
 
-def run(method,file_dir,sample_file,processing_number=1,percent=0.5,bin_width=0.03,bin_precision=2):
+def run(method,file_dir,sample_file,processing_number=1,percent=0.2,bin_width=0.03,bin_precision=2):
 	if method=='Dinosaur':
 		import deeprtalign.pre_step.dinosaur
 		deeprtalign.pre_step.dinosaur.pre_step(file_dir,sample_file)
@@ -48,7 +48,7 @@ def run(method,file_dir,sample_file,processing_number=1,percent=0.5,bin_width=0.
 	else:
 		from deeprtalign import mass_alignment_samples
 		mass_alignment_samples.run_alignment(percent)
-	collect_mass_alignment.collect_information()
+	collect_mass_alignment.collect_information(bin_precision,bin_width)
 	shutil.rmtree('pre_result')
 	shutil.rmtree('shift_result')
 	shutil.rmtree('shift_result_bins')

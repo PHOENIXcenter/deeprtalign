@@ -5,7 +5,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
 	name='deeprtalign',
-	version="1.0.2",
+	version="1.0.3",
 	packages=find_packages(),
 	python_requires='>=3',
 	install_requires=[
@@ -22,5 +22,6 @@ setup(
 	description='retention time alignment tool for large cohort LC-MS data analysis',
 	long_description=long_description,
 	long_description_content_type='text/markdown',
+	url='https://github.com/FineLiu/deeprtalign',
 	license='GPLv3'
 )

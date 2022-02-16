@@ -10,9 +10,11 @@
 # FITNESS FOR A PARTICULAR PURPOSE. See the included LICENSE file for details.
 
 import pandas as pd
+import numpy as np
+import math
 import os
 
-def collect_information():
+def collect_information(bin_precision,bin_width):
 	folder='mass_align_all'
 	
 	result_folder='mass_align_all_information'
@@ -30,15 +32,24 @@ def collect_information():
 		m=m+1
 		file_path=folder+'/'+file
 		window=file.split('.csv')[0]
+		window_1=round(float(window.split('_')[0]),bin_precision)
+		window_list=[]
+		window_size=0
+		while window_size<bin_width:
+			window_2=round(window_1+window_size,bin_precision)
+			window_list.append(window_2)
+			window_size=round(window_size+1/math.pow(10,bin_precision),2)
+		window_central=str(round(np.median(window_list),bin_precision))
 		print('step_6:',n,window,total_number)
 		file_df=pd.read_csv(file_path,converters={'Tmass':str})
 		file_df=file_df[file_df['status']=='use']
 		grouped=file_df.groupby(['group'])
 		for name,group in grouped:
+			group_central=group[group['Tmass']==window_central]
+			if len(group_central)<len(group)/2:
+				continue
 			window_group=window+'_'+str(name)
 			group['group']=window_group
-			if len(group)<2:
-				continue
 			if len(result_df)==0:
 				result_df=group
 			else:

@@ -1,4 +1,4 @@
-# DeepRTAlign v1.0.2
+# DeepRTAlign v1.0.3
 
 ## Overview
 
@@ -41,7 +41,7 @@ DeepRTAlign is a deep learning-based retention time alignment tool for large coh
    
    ```
    
-   processing_number (int) depends on your hardware, percent (float:0-1) is a threshold, DeepRTAlign will skip the bins with sample numbers below the percent of total sample numbers. bin_width(float) and bin_precision (int) depends on your feature extraction parameters.
+   processing_number (int, default 1) depends on your hardware, percent (float:0-1, default 0.2) is a threshold, DeepRTAlign will skip the bins with sample numbers below the percent of total sample numbers. bin_width(float, default 0.03) and bin_precision (int, default 2) depends on your feature extraction parameters.
    
 3. The results will output to the mass_align_all_information folder. In order to avoid a single file from being too large, a single result file contains at most 10,000 groups. Each group contains the features from different samples aligned by DeepRTAlign.
 
