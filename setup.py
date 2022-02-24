@@ -5,9 +5,9 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
 	name='deeprtalign',
-	version="1.0.3",
+	version="1.0.6",
 	packages=find_packages(),
-	python_requires='>=3',
+	python_requires='>=3.4',
 	install_requires=[
 						'xlrd==1.2.0',
 						'pandas>=0.24',

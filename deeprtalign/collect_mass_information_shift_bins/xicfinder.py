@@ -7,8 +7,9 @@ Created on Sun Apr 25 16:28:49 2021
 import pandas as pd
 import os
 import shutil
+import tracemalloc
 
-def collect_bins(bin_width,bin_precision):
+def collect_bins(bin_width,bin_precision,dict_size):
 	file_dir='shift_result'
 	
 	result_dir='shift_result_bins'
@@ -18,6 +19,8 @@ def collect_bins(bin_width,bin_precision):
 	if not os.path.exists(result_dir):
 		os.mkdir(result_dir)
 	
+	shift_result={}
+	tracemalloc.start()
 	for fraction in os.listdir(file_dir):
 		for file in os.listdir(file_dir+'/'+fraction):
 			print('step_3:',file,fraction)
@@ -50,7 +53,7 @@ def collect_bins(bin_width,bin_precision):
 				bin_df['bin_1_f']=bin_1_f
 				bin_df['bin_2_f']=bin_2_f
 				bin_number=len(bin_df)
-				batch_size=int(bin_number/20)
+				batch_size=int(bin_number/50)
 			batch_number=0
 			bin_index_begin=0
 			while bin_index_begin+batch_size<bin_number:
@@ -73,15 +76,36 @@ def collect_bins(bin_width,bin_precision):
 					bin_1=bin_mass.loc[index]['bin_1']
 					bin_2=bin_mass.loc[index]['bin_2']
 					batch_number=bin_mass.loc[index]['batch_number']
-					if not os.path.exists(result_dir+'/'+str(batch_number)):
-						os.mkdir(result_dir+'/'+str(batch_number))
-					if not os.path.exists(result_dir+'/'+str(batch_number)+'/'+bin_1+'_'+bin_2+'.csv'):
-						result_file=open(result_dir+'/'+str(batch_number)+'/'+bin_1+'_'+bin_2+'.csv','a')
-						result_file.write(title_line)
-						result_file.close()
-					result_file=open(result_dir+'/'+str(batch_number)+'/'+bin_1+'_'+bin_2+'.csv','a')
-					result_file.write(sample+','+fraction+','+oneline)
-					result_file.close()
+					new_key=result_dir+'/'+str(batch_number)+'/'+bin_1+'_'+bin_2+'.csv'
+					if new_key in shift_result.keys():
+						shift_result[new_key]=shift_result[new_key]+sample+','+fraction+','+oneline
+					else:
+						shift_result[new_key]=sample+','+fraction+','+oneline
+					current, peak = tracemalloc.get_traced_memory()
+					if current>dict_size*1024*1024:
+						for key in shift_result:
+							if not os.path.exists(key.split('/')[0]+'/'+key.split('/')[1]):
+								os.mkdir(result_dir+'/'+str(batch_number))
+							if not os.path.exists(key):
+								result_file=open(key,'a')
+								result_file.write(title_line)
+								result_file.close()
+							result_file=open(key,'a')
+							result_file.write(shift_result[key])
+							result_file.close()
+						shift_result={}
+	for key in shift_result:
+		if not os.path.exists(key.split('/')[0]+'/'+key.split('/')[1]):
+			os.mkdir(key.split('/')[0]+'/'+key.split('/')[1])
+		if not os.path.exists(key):
+			result_file=open(key,'a')
+			result_file.write(title_line)
+			result_file.close()
+		result_file=open(key,'a')
+		result_file.write(shift_result[key])
+		result_file.close()
+	shift_result={}
+	tracemalloc.stop()
 	for son_path in os.listdir(result_dir):
 		dir_path=os.path.join(result_dir,son_path)
 		if os.path.isdir(dir_path):
