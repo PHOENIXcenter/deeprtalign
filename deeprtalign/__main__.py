@@ -14,50 +14,58 @@ from deeprtalign import collect_mass_alignment
 import argparse
 import shutil
 
-def run(method,file_dir,sample_file,processing_number=1,percent=0.2,bin_width=0.03,bin_precision=2,dict_size=1024):
-	if method=='Dinosaur':
-		import deeprtalign.pre_step.dinosaur
-		deeprtalign.pre_step.dinosaur.pre_step(file_dir,sample_file)
-	if method=='XICFinder':
-		import deeprtalign.pre_step.xicfinder
-		deeprtalign.pre_step.xicfinder.pre_step(file_dir,sample_file)
-	if method=='OpenMS':
-		import deeprtalign.pre_step.openms
-		deeprtalign.pre_step.openms.pre_step(file_dir,sample_file)
-	if method=='MaxQuant':
-		import deeprtalign.pre_step.maxquant
-		deeprtalign.pre_step.maxquant.pre_step(file_dir,sample_file)
-	collect_time_shift.collect_shift()
-	if method=='Dinosaur':
-		import deeprtalign.collect_mass_information_shift_bins.dinosaur
-		deeprtalign.collect_mass_information_shift_bins.dinosaur.collect_bins(bin_width,bin_precision,dict_size)
-	if method=='XICFinder':
-		import deeprtalign.collect_mass_information_shift_bins.xicfinder
-		deeprtalign.collect_mass_information_shift_bins.xicfinder.collect_bins(bin_width,bin_precision,dict_size)
-	if method=='OpenMS':
-		import deeprtalign.collect_mass_information_shift_bins.openms
-		deeprtalign.collect_mass_information_shift_bins.openms.collect_bins(bin_width,bin_precision,dict_size)
-	if method=='MaxQuant':
-		import deeprtalign.collect_mass_information_shift_bins.maxquant
-		deeprtalign.collect_mass_information_shift_bins.maxquant.collect_bins(bin_width,bin_precision,dict_size)
-	if processing_number>1:
-		from deeprtalign import mass_information_filter_multi
-		mass_information_filter_multi.run_mass_filter(processing_number)
-	else:
-		from deeprtalign import mass_information_filter
-		mass_information_filter.mass_filter()
-	if processing_number>1:
-		from deeprtalign import mass_alignment_samples_multi
-		mass_alignment_samples_multi.run_alignment(processing_number,percent)
-	else:
-		from deeprtalign import mass_alignment_samples
-		mass_alignment_samples.run_alignment(percent)
-	collect_mass_alignment.collect_information(bin_precision,bin_width)
-	shutil.rmtree('pre_result')
-	shutil.rmtree('shift_result')
-	shutil.rmtree('shift_result_bins')
-	shutil.rmtree('shift_result_bins_filter')
-	shutil.rmtree('mass_align_all')
+def run(method,file_dir,sample_file,processing_number=1,percent=0.2,bin_width=0.03,bin_precision=2,dict_size=1024,keep_temp=0,begin_step=1):
+	if begin_step<=1:
+		if method=='Dinosaur':
+			import deeprtalign.pre_step.dinosaur
+			deeprtalign.pre_step.dinosaur.pre_step(file_dir,sample_file)
+		if method=='XICFinder':
+			import deeprtalign.pre_step.xicfinder
+			deeprtalign.pre_step.xicfinder.pre_step(file_dir,sample_file)
+		if method=='OpenMS':
+			import deeprtalign.pre_step.openms
+			deeprtalign.pre_step.openms.pre_step(file_dir,sample_file)
+		if method=='MaxQuant':
+			import deeprtalign.pre_step.maxquant
+			deeprtalign.pre_step.maxquant.pre_step(file_dir,sample_file)
+	if begin_step<=2:
+		collect_time_shift.collect_shift()
+	if begin_step<=3:
+		if method=='Dinosaur':
+			import deeprtalign.collect_mass_information_shift_bins.dinosaur
+			deeprtalign.collect_mass_information_shift_bins.dinosaur.collect_bins(bin_width,bin_precision,dict_size)
+		if method=='XICFinder':
+			import deeprtalign.collect_mass_information_shift_bins.xicfinder
+			deeprtalign.collect_mass_information_shift_bins.xicfinder.collect_bins(bin_width,bin_precision,dict_size)
+		if method=='OpenMS':
+			import deeprtalign.collect_mass_information_shift_bins.openms
+			deeprtalign.collect_mass_information_shift_bins.openms.collect_bins(bin_width,bin_precision,dict_size)
+		if method=='MaxQuant':
+			import deeprtalign.collect_mass_information_shift_bins.maxquant
+			deeprtalign.collect_mass_information_shift_bins.maxquant.collect_bins(bin_width,bin_precision,dict_size)
+	if begin_step<=4:
+		if processing_number>1:
+			from deeprtalign import mass_information_filter_multi
+			mass_information_filter_multi.run_mass_filter(processing_number)
+		else:
+			from deeprtalign import mass_information_filter
+			mass_information_filter.mass_filter()
+	if begin_step<=5:
+		if processing_number>1:
+			from deeprtalign import mass_alignment_samples_multi
+			mass_alignment_samples_multi.run_alignment(processing_number,percent)
+		else:
+			from deeprtalign import mass_alignment_samples
+			mass_alignment_samples.run_alignment(percent)
+	if begin_step<=6:
+		collect_mass_alignment.collect_information(bin_precision,bin_width,percent)
+	if keep_temp==0:
+		shutil.rmtree('pre_result')
+		shutil.rmtree('shift_result')
+		shutil.rmtree('shift_result_bins')
+		shutil.rmtree('shift_result_bins_filter')
+		shutil.rmtree('shift_result_bins_filter_done')
+		shutil.rmtree('mass_align_all')
 	
 parser = argparse.ArgumentParser()
 parser.add_argument('--method', '-m', type=str, help='the feature extraction method, support Dinosaur, XICFinder, OpenMS and MaxQuant',required=True,choices=['Dinosaur','XICFinder','OpenMS','MaxQuant'])
@@ -68,7 +76,9 @@ parser.add_argument('--percent', '-pt', type=float, help='skip the bins with sam
 parser.add_argument('--bin_width', '-bw', type=float, help='the bin width, choose according to the feature extraction step', default=0.03)
 parser.add_argument('--bin_precision', '-bp', type=int, help='the decimal place of bins, choose according to the feature extraction step', default=2)
 parser.add_argument('--dict_size', '-ds', type=int, help='the dict size, choose according to the memory size', default=1024)
+parser.add_argument('--keep_temp', '-kt', type=int, help='if keep the temp files, 0 remove, 1 keep', default=0)
+parser.add_argument('--begin_step', '-bs', type=int, help='begin from any step', default=1)
 args = parser.parse_args()
 	
 if __name__ == '__main__':
-	run(args.method,args.file_dir,args.sample_file,args.processing_number,args.percent,args.bin_width,args.bin_precision,args.dict_size)
+	run(args.method,args.file_dir,args.sample_file,args.processing_number,args.percent,args.bin_width,args.bin_precision,args.dict_size,args.keep_temp,args.begin_step)

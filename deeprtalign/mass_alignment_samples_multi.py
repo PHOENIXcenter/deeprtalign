@@ -17,6 +17,7 @@ import torch.utils.data as Data
 import numpy as np
 import pandas as pd
 import os
+import shutil
 import multiprocessing as mp
 import pkg_resources
 
@@ -75,7 +76,7 @@ def get_np_from_df(df,dimension,intensity,time):
 			mass_np[middle_dimension+m]=np.array([0,0])
 	return mass_np
 
-def mass_alignment(mass_folder,file,result_folder,total_sample_number,percent):
+def mass_alignment(mass_folder,file,result_folder,total_sample_number,percent,done_mass_folder):
 	params_file = pkg_resources.resource_filename('deeprtalign', 'data/params.pt')
 	base_file = pkg_resources.resource_filename('deeprtalign', 'data/base.npy')
 	net = MatchingNetwork()
@@ -90,6 +91,7 @@ def mass_alignment(mass_folder,file,result_folder,total_sample_number,percent):
 
 	sample_list=mass_df['sample'].value_counts()
 	if len(sample_list)<(total_sample_number*percent):
+		shutil.move(mass_folder+'/'+file, done_mass_folder)
 		return 0
 	sample_df=sample_list.to_frame(name='number')
 	sample_df.sort_values(by='number',ascending=False,inplace=True)
@@ -175,10 +177,12 @@ def mass_alignment(mass_folder,file,result_folder,total_sample_number,percent):
 				n=n+1
 			group=group+1
 	mass_df.to_csv(result_folder+'/'+file,index=False)
+	shutil.move(mass_folder+'/'+file, done_mass_folder)
 	return 1
 	
 def run_alignment(processing_number,percent):
 	mass_folder='shift_result_bins_filter'
+	done_mass_folder='shift_result_bins_filter_done'
 	result_folder='mass_align_all'
 
 	fraction_1=os.listdir('pre_result')[0]
@@ -187,6 +191,8 @@ def run_alignment(processing_number,percent):
 	
 	if not os.path.exists(result_folder):
 		os.mkdir(result_folder)
+	if not os.path.exists(done_mass_folder):
+		os.mkdir(done_mass_folder)
 	
 	pool_arg=[]
 	for file in os.listdir(mass_folder):
@@ -196,10 +202,11 @@ def run_alignment(processing_number,percent):
 		file_arg.append(result_folder)
 		file_arg.append(total_sample_number)
 		file_arg.append(percent)
+		file_arg.append(done_mass_folder)
 		pool_arg.append(file_arg)
 	print('step_5: running')
 	pool=mp.Pool(processes=processing_number)
-	result = pool.starmap(mass_alignment,pool_arg)
+	result = pool.starmap_async(mass_alignment,pool_arg)
 	pool.close()
 	pool.join()
 	print('step_5: finish')

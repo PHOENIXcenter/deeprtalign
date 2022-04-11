@@ -49,7 +49,7 @@ def run_mass_filter(processing_number):
 		pool_arg.append(file_arg)
 	print('step_4: running')
 	pool=mp.Pool(processes=processing_number)
-	result = pool.starmap(mass_filter,pool_arg)
+	result = pool.starmap_async(mass_filter,pool_arg)
 	pool.close()
 	pool.join()
 	print('step_4: finish')

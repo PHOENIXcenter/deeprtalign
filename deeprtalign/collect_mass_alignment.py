@@ -14,8 +14,11 @@ import numpy as np
 import math
 import os
 
-def collect_information(bin_precision,bin_width):
+def collect_information(bin_precision,bin_width,percent):
 	folder='mass_align_all'
+	
+	fraction_1=os.listdir('pre_result')[0]
+	total_sample_number=len(os.listdir('pre_result/'+fraction_1))
 	
 	result_folder='mass_align_all_information'
 	if not os.path.exists(result_folder):
@@ -45,6 +48,8 @@ def collect_information(bin_precision,bin_width):
 		file_df=file_df[file_df['status']=='use']
 		grouped=file_df.groupby(['group'])
 		for name,group in grouped:
+			if len(group)<total_sample_number*percent:
+				continue
 			group_central=group[group['Tmass']==window_central]
 			if len(group_central)<len(group)/2:
 				continue
@@ -54,8 +59,8 @@ def collect_information(bin_precision,bin_width):
 				result_df=group
 			else:
 				result_df=pd.concat([result_df,group],ignore_index=True,sort=False)
-		if total_number>10000:
-			if m>10000:
+		if total_number>1000:
+			if m>1000:
 				result_df.to_csv(result_folder+'/'+'information_'+str(k)+'.csv',index=False)
 				result_df=pd.DataFrame()
 				k=k+1
