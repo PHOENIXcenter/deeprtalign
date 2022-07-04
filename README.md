@@ -1,4 +1,4 @@
-# DeepRTAlign v1.1.1
+# DeepRTAlign v1.1.2
 
 ## Overview
 
@@ -25,7 +25,7 @@ DeepRTAlign is a deep learning-based retention time alignment tool for large coh
                            the sample file
    ```
 
-   As an example, you can use command `python -m deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx ` to handle the Dinosaur test data in example_files folder.
+   As an example, to handle the Dinosaur test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `python -m deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx ` .
 
    optional arguments:
    
@@ -46,7 +46,7 @@ DeepRTAlign is a deep learning-based retention time alignment tool for large coh
                            begin from any step
    ```
    
-   processing_number (int, default 1) depends on your hardware, percent (float:0-1, default 0.2) is a threshold, DeepRTAlign will skip the bins with sample numbers below the percent of total sample numbers. bin_width(float, default 0.03) and bin_precision (int, default 2) depends on your feature extraction parameters. dict_size(int , default 1024) depends on your memory size, default 1024MB. If you want to keep the temp files, set the keep_temp(int, default 0) to 1. You can begin from any begin_step(int, default 1).
+   processing_number (int, default 1) depends on your hardware, percent (float:0-1, default 0) is a threshold, DeepRTAlign will skip the bins with sample numbers below the percent of total sample numbers. bin_width(float, default 0.03) and bin_precision (int, default 2) depends on your feature extraction parameters. dict_size(int , default 1024) depends on your memory size, default 1024MB. If you want to keep the temp files, set the keep_temp(int, default 0) to 1. You can begin from any begin_step(int, default 1).
    
 3. The results will output to the mass_align_all_information folder. In order to avoid a single file from being too large, a single result file contains at most 1,000 groups. Each group contains the features from different samples aligned by DeepRTAlign.
 

@@ -14,7 +14,7 @@ from deeprtalign import collect_mass_alignment
 import argparse
 import shutil
 
-def run(method,file_dir,sample_file,processing_number=1,percent=0.2,bin_width=0.03,bin_precision=2,dict_size=1024,keep_temp=0,begin_step=1):
+def run(method,file_dir,sample_file,processing_number=1,percent=0,bin_width=0.03,bin_precision=2,dict_size=1024,keep_temp=0,begin_step=1):
 	if begin_step<=1:
 		if method=='Dinosaur':
 			import deeprtalign.pre_step.dinosaur
@@ -72,7 +72,7 @@ parser.add_argument('--method', '-m', type=str, help='the feature extraction met
 parser.add_argument('--file_dir', '-f', type=str, help='the data folder', required=True)
 parser.add_argument('--sample_file', '-s', type=str, help='the sample file', required=True)
 parser.add_argument('--processing_number', '-pn', type=int, help='processing number, choose according to the number of CPUs', default=1)
-parser.add_argument('--percent', '-pt', type=float, help='skip the bins with sample numbers below the percent of total sample numbers ', default=0.5)
+parser.add_argument('--percent', '-pt', type=float, help='skip the bins with sample numbers below the percent of total sample numbers ', default=0)
 parser.add_argument('--bin_width', '-bw', type=float, help='the bin width, choose according to the feature extraction step', default=0.03)
 parser.add_argument('--bin_precision', '-bp', type=int, help='the decimal place of bins, choose according to the feature extraction step', default=2)
 parser.add_argument('--dict_size', '-ds', type=int, help='the dict size, choose according to the memory size', default=1024)

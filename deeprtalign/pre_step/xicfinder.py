@@ -88,7 +88,7 @@ def sample_pretreat(filepath,sample,fraction,result_dir):
 		erro_files.close()
 		return False
 	df=pd.DataFrame(XICs)
-	drop_negative=df[(df['charge']==1)|(df['scan_number']==1)|(df['intensity']<0)|(df['goodness_fit']<0.9)].index
+	drop_negative=df[(df['charge']==1)|(df['intensity']<0)].index
 	df.drop(drop_negative,inplace=True)
 	Tmz=[str(round(a,3))for a in df['mz']]
 	df.loc[:,'Tmz']=Tmz

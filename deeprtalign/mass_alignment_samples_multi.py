@@ -205,8 +205,19 @@ def run_alignment(processing_number,percent):
 		file_arg.append(done_mass_folder)
 		pool_arg.append(file_arg)
 	print('step_5: running')
-	pool=mp.Pool(processes=processing_number)
+	n=10000
+	m=0
+	while len(pool_arg)>n:
+		m=m+1
+		sub_pool_arg=pool_arg[:n]
+		del pool_arg[:n]
+		pool=mp.Pool(processes=processing_number,maxtasksperchild=10)
+		result = pool.starmap_async(mass_alignment,sub_pool_arg)
+		pool.close()
+		pool.join()
+		print('step_5:',str(m*n),'finish')
+	pool=mp.Pool(processes=processing_number,maxtasksperchild=10)
 	result = pool.starmap_async(mass_alignment,pool_arg)
 	pool.close()
 	pool.join()
-	print('step_5: finish')
+	print('step_5: all finish')
