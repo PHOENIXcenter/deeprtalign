@@ -8,7 +8,7 @@ DeepRTAlign is a deep learning-based retention time alignment tool for large coh
 
 1. Install Python3
 2. Install Pytorch CPU version, please refer to https://pytorch.org/
-3. Use `pip install deeprtalign` to install deeprtalign OR download `deeprtalign-1.1.3-py3-none-any.whl` from github, and use `pip deeprtalign-1.1.3-py3-none-any.whl` to install deeprtalign
+3. Use `pip install deeprtalign` to install deeprtalign OR download `deeprtalign-1.1.3-py3-none-any.whl` from github, and use `pip install deeprtalign-1.1.3-py3-none-any.whl` to install deeprtalign
 
 ## Getting Started
 
