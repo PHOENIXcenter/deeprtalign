@@ -60,7 +60,7 @@ DeepRTAlign is a deep learning-based retention time alignment tool for large coh
 3. The results will output to the mass_align_all_information folder. In order to avoid a single file from being too large, a single result file contains at most 1,000 groups. Each group contains the features from different samples aligned by DeepRTAlign.
 
 ## Result Description
-In result files, each line represent a feature, the meaning of each column is as follows.
+In result files, each line represents a feature, the meaning of each column is as follows.
 ### Main columns
 - sample: the sample name corresponding to this feature.
 - fraction: the fraction corresponding to this feature.
