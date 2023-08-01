@@ -107,8 +107,8 @@ Other columns are intermediate results and can be ignored.
 
 Do not run the different projects under a same folder, the results will be overwritten.
 
-## Demo
-The demo are in the example_files folder. We use part of features in UPS2-Y dataset as examples. On a normal computer, each work will take about 30 minutes. We strongly recommend users to use the `-pn` parameter according to the CPU core numbers. This will make it run much faster.
+## Demos
+The demos are in the example_files folder. We use part of features in UPS2-Y dataset as examples. On a normal computer, each work will take about 30 minutes. We strongly recommend users to use the `-pn` parameter according to the CPU core numbers. This will make it run much faster.
 We provide Dinosaur, MaxQuant, OpenMS and XICFinder results for user to test DeepRTAlign.
 
 To handle the Dinosaur test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
