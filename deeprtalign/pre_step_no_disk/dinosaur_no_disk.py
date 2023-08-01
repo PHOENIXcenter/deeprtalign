@@ -14,7 +14,7 @@ import math
 import xlrd
 import pandas as pd
 
-def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision):
+def sample_pretreat(filepath,sample,fraction,result,bin_precision):
 	df=pd.read_csv(filepath,sep='\t')
 	#drop_negative=df[df['charge']==1].index
 	#df.drop(drop_negative,inplace=True)
@@ -36,12 +36,12 @@ def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision):
 	#Tmass=[str(round(c*float(d)-c*1.007276,2)) for c,d in zip(df['charge'],df['Tmz'])]
 	Tmass=[str(round(a,bin_precision))for a in df['mz']]
 	df.loc[:,'Tmass']=Tmass
-	if not os.path.exists(result_dir):
-		os.mkdir(result_dir)
-	if not os.path.exists(result_dir+'/'+fraction):
-		os.mkdir(result_dir+'/'+fraction)
-	df.to_csv(result_dir+'/'+fraction+'/'+sample+'.csv',index=False)
-	return True
+	if fraction in result.keys():
+		result[fraction][sample]=df
+	else:
+		result[fraction]={}
+		result[fraction][sample]=df
+	return result
 
 
 def pre_step(file_dir,sample_file,bin_precision):
@@ -56,7 +56,7 @@ def pre_step(file_dir,sample_file,bin_precision):
 		fraction_name = str(booksheet.cell_value(i,2))
 		file_class_dics[raw_name] = sample_name
 		file_fraction_dics[raw_name] = fraction_name
-	result_dir='pre_result'
+	result={}
 	for file in os.listdir(file_dir):
 		if not file.split('.')[0] in file_class_dics.keys():
 				print('file not in list!')
@@ -64,4 +64,5 @@ def pre_step(file_dir,sample_file,bin_precision):
 		print('step_1:',file)
 		sample=file_class_dics[file.split('.')[0]]
 		fraction=file_fraction_dics[file.split('.')[0]]
-		sample_pretreat(file_dir+'/'+file,sample,fraction,result_dir,bin_precision)
+		result=sample_pretreat(file_dir+'/'+file,sample,fraction,result,bin_precision)
+	return result

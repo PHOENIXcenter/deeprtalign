@@ -14,7 +14,7 @@ import math
 import xlrd
 import pandas as pd
 
-def sample_pretreat(filepath,sample,fraction,result_dir):
+def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision):
 	file=open(filepath,'r')
 	file.readline()
 	i=0
@@ -92,7 +92,7 @@ def sample_pretreat(filepath,sample,fraction,result_dir):
 	df=pd.DataFrame(XICs)
 	#drop_negative=df[df['charge']==1].index
 	#df.drop(drop_negative,inplace=True)
-	Tmz=[str(round(a,3))for a in df['mz']]
+	Tmz=df['mz']
 	df.loc[:,'Tmz']=Tmz
 	base=314448000000
 	sum_of_intensity=df['intensity'].sum()
@@ -100,7 +100,7 @@ def sample_pretreat(filepath,sample,fraction,result_dir):
 	Tintensity10=[math.log10(a/sum_of_intensity*base)for a in df['intensity']]
 	df.loc[:,'Tintensity']=Tintensity
 	#Tmass=[str(round(c*float(d)-c*1.007276,2)) for c,d in zip(df['charge'],df['Tmz'])]
-	Tmass=[str(round(a,2))for a in df['mz']]
+	Tmass=[str(round(a,bin_precision))for a in df['mz']]
 	df.loc[:,'Tmass']=Tmass
 	df.loc[:,'Tintensity10']=Tintensity10
 	Pintensity=[a/sum_of_intensity for a in df['intensity']]
@@ -116,7 +116,7 @@ def sample_pretreat(filepath,sample,fraction,result_dir):
 	return True
 
 
-def pre_step(file_dir,sample_file):
+def pre_step(file_dir,sample_file,bin_precision):
 	workbook = xlrd.open_workbook(sample_file)
 	booksheet = workbook.sheet_by_index(0)
 	file_class_dics = {}
@@ -136,4 +136,4 @@ def pre_step(file_dir,sample_file):
 		print('step_1:',file)
 		sample=file_class_dics[file.split('.')[0]]
 		fraction=file_fraction_dics[file.split('.')[0]]
-		sample_pretreat(file_dir+'/'+file,sample,fraction,result_dir)
+		sample_pretreat(file_dir+'/'+file,sample,fraction,result_dir,bin_precision)

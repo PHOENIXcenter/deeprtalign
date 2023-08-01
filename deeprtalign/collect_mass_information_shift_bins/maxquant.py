@@ -34,7 +34,7 @@ def collect_bins(bin_width,bin_precision,dict_size):
 				mass=oneline.split(',')[10].strip()
 				mass_f=round(float(mass),bin_precision)
 				bin_1_f=mass_f-bin_width+(1/math.pow(10,bin_precision))
-				while bin_1_f<mass_f:
+				while bin_1_f<=mass_f:
 					bin_2_f=bin_1_f+bin_width
 					bin_1=str(round(bin_1_f,bin_precision))
 					bin_2=str(round(bin_2_f,bin_precision))

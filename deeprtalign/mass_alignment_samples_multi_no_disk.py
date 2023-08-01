@@ -47,21 +47,17 @@ class MatchingNetwork(nn.Module):
 		
 		return output
 
-def mass_alignment(mass_folder,file,result_folder,total_fraction_number,total_sample_number,max_time,max_log_intensity,percent,done_mass_folder):
+def mass_alignment(mass_name,mass_df,total_fraction_number,total_sample_number,max_time,max_log_intensity,percent):
 	pd.set_option('mode.chained_assignment', None)
-	if not os.path.exists(result_folder):
-		os.mkdir(result_folder)
-	
-	mass_df=pd.read_csv(mass_folder+'/'+file,converters={'Tmass':str})
+	result={}
+
 	sample_fraction_list=mass_df[['sample','fraction']].value_counts()
 	if len(sample_fraction_list)<(total_sample_number*total_fraction_number*percent):
-		shutil.move(mass_folder+'/'+file, done_mass_folder)
-		return 0
+		return result
 	
 	sample_list=mass_df[['sample']].value_counts()
 	if len(sample_list)<2:
-		shutil.move(mass_folder+'/'+file, done_mass_folder)
-		return 0
+		return result
 	
 	mass_df.sort_values(by='Ttime',ascending=False,inplace=True)
 	r_n_1=random.randint(0, len(sample_list)-1)
@@ -85,7 +81,7 @@ def mass_alignment(mass_folder,file,result_folder,total_fraction_number,total_sa
 	mass_df_decoy.loc[:,'mz_error']=-1
 	mass_df_decoy.loc[:,'score']=0
 	
-	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df,max_time,max_log_intensity)
+	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(mass_name,mass_df,max_time,max_log_intensity)
 
 	for group in aligned_result.index:
 		for sample in list(aligned_result.columns):
@@ -102,7 +98,7 @@ def mass_alignment(mass_folder,file,result_folder,total_fraction_number,total_sa
 	
 	#sample_list=mass_df_decoy[['sample','fraction']].value_counts()
 	
-	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df_decoy,max_time,max_log_intensity)
+	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(mass_name,mass_df_decoy,max_time,max_log_intensity)
 
 	for group in aligned_result.index:
 		for sample in list(aligned_result.columns):
@@ -138,9 +134,8 @@ def mass_alignment(mass_folder,file,result_folder,total_fraction_number,total_sa
 					scores.append(score)
 			mass_df.loc[index,'adj_score']=np.mean(scores)
 			n=n+1
-	mass_df.to_csv(result_folder+'/'+file,index=False)
-	shutil.move(mass_folder+'/'+file, done_mass_folder)
-	return 1
+	result[mass_name]=mass_df
+	return result
 
 def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 	pd.set_option('mode.chained_assignment', None)
@@ -421,34 +416,21 @@ def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_resul
 
 
 	
-def run_alignment(processing_number,max_time,max_log_intensity,percent):
-	mass_folder='shift_result_bins_filter'
-	done_mass_folder='shift_result_bins_filter_done'
-	result_folder='mass_align_all'
-
-	fraction_1=os.listdir('pre_result')[0]
-	total_fraction_number=len(os.listdir('pre_result'))
-	total_sample_number=len(os.listdir('pre_result/'+fraction_1))
-	
-	
-	if not os.path.exists(result_folder):
-		os.mkdir(result_folder)
-	if not os.path.exists(done_mass_folder):
-		os.mkdir(done_mass_folder)
-	
+def run_alignment(processing_number,max_time,max_log_intensity,percent,total_fraction_number,total_sample_number,pre_result):
+	pd.set_option('mode.chained_assignment', None)
 	pool_arg=[]
-	for file in os.listdir(mass_folder):
+	for mass_name in pre_result.keys():
+		mass_df=pre_result[mass_name]
 		file_arg=[]
-		file_arg.append(mass_folder)
-		file_arg.append(file)
-		file_arg.append(result_folder)
+		file_arg.append(mass_name)
+		file_arg.append(mass_df)
 		file_arg.append(total_fraction_number)
 		file_arg.append(total_sample_number)
 		file_arg.append(max_time)
 		file_arg.append(max_log_intensity)
 		file_arg.append(percent)
-		file_arg.append(done_mass_folder)
 		pool_arg.append(file_arg)
+	result_dict={}
 	print('step_5: running')
 	n=1000
 	m=0
@@ -457,12 +439,17 @@ def run_alignment(processing_number,max_time,max_log_intensity,percent):
 		sub_pool_arg=pool_arg[:n]
 		del pool_arg[:n]
 		pool=mp.Pool(processes=processing_number,maxtasksperchild=10)
-		result = pool.starmap_async(mass_alignment,sub_pool_arg)
+		result = pool.starmap(mass_alignment,sub_pool_arg)
 		pool.close()
 		pool.join()
 		print('step_5:',str(m*n),'finish')
+		for result_dict_1 in result:
+			result_dict.update(result_dict_1)
 	pool=mp.Pool(processes=processing_number,maxtasksperchild=10)
-	result = pool.starmap_async(mass_alignment,pool_arg)
+	result = pool.starmap(mass_alignment,pool_arg)
 	pool.close()
 	pool.join()
+	for result_dict_1 in result:
+		result_dict.update(result_dict_1)
 	print('step_5: all finish')
+	return result_dict

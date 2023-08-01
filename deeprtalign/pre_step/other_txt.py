@@ -14,22 +14,69 @@ import math
 import xlrd
 import pandas as pd
 
-def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision):
-	df=pd.read_csv(filepath,sep='\t')
-	#drop_negative=df[df['charge']==1].index
-	#df.drop(drop_negative,inplace=True)
+def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision,mz_col,rt_col,intensity_col,charge_col):
+	file=open(filepath,'r')
+	file.readline()
+	i=0
+	j=0
+	XICs={'charge':[],'time':[],'intensity':[],'mz':[]}
+	while True: 
+		oneline=file.readline()
+		if not oneline:
+			break
+		n=1
+		while j<len(oneline):
+			if oneline[j]=='\t' or j==len(oneline)-1:
+				if n==mz_col:
+					XICs['mz'].append(float(oneline[i:j]))
+					n=n+1
+					j=j+1
+					i=j
+					continue
+				if n==rt_col:
+					XICs['time'].append(float(oneline[i:j]))
+					n=n+1
+					j=j+1
+					i=j
+					continue
+				if n==intensity_col:
+					XICs['intensity'].append(float(oneline[i:j]))
+					n=n+1
+					j=j+1
+					i=j
+					continue
+				if n==charge_col:
+					XICs['charge'].append(float(oneline[i:j]))
+					i=0
+					j=0
+					break
+				n=n+1
+				j=j+1
+				i=j
+			else:
+				j=j+1
+	try:
+		df=pd.DataFrame(XICs)
+	except:
+		print(filepath+' is not complete!')
+		erro_files=open('erro_files.txt','a')
+		erro_files.write(filepath+'\n')
+		erro_files.close()
+		return False
+	df=pd.DataFrame(XICs)
+	drop_negative=df[(df['intensity']<0)].index
+	df.drop(drop_negative,inplace=True)
 	Tmz=df['mz']
 	df.loc[:,'Tmz']=Tmz
-	df.loc[:,'intensity']=df['intensitySum']
-	df.loc[:,'rt_start']=df['rtStart']
-	df.loc[:,'time']=df['rtApex']
-	df.loc[:,'rt_end']=df['rtEnd']
+	base=189346000000
 	sum_of_intensity=df['intensity'].sum()
-	Tintensity=[math.log2(a)for a in df['intensity']]
-	Tintensity10=[math.log10(a)for a in df['intensity']]
+	Tintensity=[math.log2(a/sum_of_intensity*base)for a in df['intensity']]
+	Tintensity10=[math.log10(a/sum_of_intensity*base)for a in df['intensity']]
+	Pintensity=[a/sum_of_intensity for a in df['intensity']]
+	#intensity=[(a/sum_of_intensity*base)for a in df['intensity']]
+	#df.loc[:,'intensity']=intensity
 	df.loc[:,'Tintensity']=Tintensity
 	df.loc[:,'Tintensity10']=Tintensity10
-	Pintensity=[a/sum_of_intensity for a in df['intensity']]
 	df.loc[:,'Pintensity']=Pintensity
 	drop_zero=df[df['Tintensity']<=0].index
 	df.drop(drop_zero,inplace=True)
@@ -41,10 +88,10 @@ def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision):
 	if not os.path.exists(result_dir+'/'+fraction):
 		os.mkdir(result_dir+'/'+fraction)
 	df.to_csv(result_dir+'/'+fraction+'/'+sample+'.csv',index=False)
+	file.close()
 	return True
 
-
-def pre_step(file_dir,sample_file,bin_precision):
+def pre_step(file_dir,sample_file,bin_precision,mz_col,rt_col,intensity_col,charge_col):
 	workbook = xlrd.open_workbook(sample_file)
 	booksheet = workbook.sheet_by_index(0)
 	file_class_dics = {}
@@ -64,4 +111,5 @@ def pre_step(file_dir,sample_file,bin_precision):
 		print('step_1:',file)
 		sample=file_class_dics[file.split('.')[0]]
 		fraction=file_fraction_dics[file.split('.')[0]]
-		sample_pretreat(file_dir+'/'+file,sample,fraction,result_dir,bin_precision)
+		sample_pretreat(file_dir+'/'+file,sample,fraction,result_dir,bin_precision,mz_col,rt_col,intensity_col,charge_col)
+

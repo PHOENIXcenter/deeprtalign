@@ -13,8 +13,8 @@ import pandas as pd
 import multiprocessing as mp
 import os
 
-def mass_filter(file_dir,file,result_dir,min_time_diff):
-	df=pd.read_csv(file_dir+'/'+file,converters={'Tmass':str})
+def mass_filter(mass_name,df,min_time_diff):
+	result={}
 	grouped=df.groupby(['sample','fraction','charge'])
 	for name,group in grouped:
 		group_sort=group.sort_values(by='intensity',ascending=False).copy()
@@ -32,25 +32,24 @@ def mass_filter(file_dir,file,result_dir,min_time_diff):
 						m=m+1
 						group_sort.drop(index,axis=0,inplace=True)
 						df.drop(index,axis=0,inplace=True)
-	df.to_csv(result_dir+'/'+file,index=False)
-def run_mass_filter(processing_number,min_time_diff):
-	file_dir='shift_result_bins'
-	result_dir='shift_result_bins_filter'
-	
-	if not os.path.exists(result_dir):
-		os.mkdir(result_dir)
-	
+	result[mass_name]=df
+	return result
+def run_mass_filter(processing_number,min_time_diff,pre_result):
 	pool_arg=[]
-	for file in os.listdir(file_dir):
+	for mass_name in pre_result.keys():
+		df=pre_result[mass_name]
 		file_arg=[]
-		file_arg.append(file_dir)
-		file_arg.append(file)
-		file_arg.append(result_dir)
+		file_arg.append(mass_name)
+		file_arg.append(df)
 		file_arg.append(min_time_diff)
 		pool_arg.append(file_arg)
+	result_dict={}
 	print('step_4: running')
 	pool=mp.Pool(processes=processing_number)
-	pool.starmap_async(mass_filter,pool_arg)
+	result=pool.starmap(mass_filter,pool_arg)
 	pool.close()
 	pool.join()
 	print('step_4: finish')
+	for result_dict_1 in result:
+		result_dict.update(result_dict_1)
+	return result_dict

@@ -1,1 +1,1 @@
-__all__ = ['dinosaur', 'openms', 'maxquant','xicfinder']
+__all__ = ['dinosaur', 'openms', 'maxquant','xicfinder','other_txt','other_csv']

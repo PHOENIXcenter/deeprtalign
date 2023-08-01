@@ -14,7 +14,7 @@ import math
 import xlrd
 import pandas as pd
 
-def sample_pretreat(filepath,sample,fraction,result_dir,file_class_dics,file_fraction_dics,bin_precision):
+def sample_pretreat(filepath,sample,fraction,file_class_dics,file_fraction_dics,result,bin_precision):
 	file=open(filepath,'r')
 	file.readline()
 	i=0
@@ -53,11 +53,11 @@ def sample_pretreat(filepath,sample,fraction,result_dir,file_class_dics,file_fra
 						df.loc[:,'rt_end']=df['time']+df['RT_length']/2
 						drop_zero=df[df['Tintensity']<=0].index
 						df.drop(drop_zero,inplace=True)
-						if not os.path.exists(result_dir):
-							os.mkdir(result_dir)
-						if not os.path.exists(result_dir+'/'+fraction):
-							os.mkdir(result_dir+'/'+fraction)
-						df.to_csv(result_dir+'/'+fraction+'/'+sample+'.csv',index=False)
+						if fraction in result.keys():
+							result[fraction][sample]=df
+						else:
+							result[fraction]={}
+							result[fraction][sample]=df
 						
 						sample=file_sample
 						fraction=file_fraction_dics[file_name]
@@ -130,7 +130,6 @@ def sample_pretreat(filepath,sample,fraction,result_dir,file_class_dics,file_fra
 	df=pd.DataFrame(XICs)
 	#drop_negative=df[df['charge']==1].index
 	#df.drop(drop_negative,inplace=True)
-	#Tmz=[str(round(a,3))for a in df['mz']]
 	Tmz=df['mz']
 	df.loc[:,'Tmz']=Tmz
 	sum_of_intensity=df['intensity'].sum()
@@ -147,13 +146,12 @@ def sample_pretreat(filepath,sample,fraction,result_dir,file_class_dics,file_fra
 	df.loc[:,'rt_end']=df['time']+df['RT_length']/2
 	drop_zero=df[df['Tintensity']<=0].index
 	df.drop(drop_zero,inplace=True)
-	if not os.path.exists(result_dir):
-		os.mkdir(result_dir)
-	if not os.path.exists(result_dir+'/'+fraction):
-		os.mkdir(result_dir+'/'+fraction)
-	df.to_csv(result_dir+'/'+fraction+'/'+sample+'.csv',index=False)
-	file.close()
-	return True
+	if fraction in result.keys():
+		result[fraction][sample]=df
+	else:
+		result[fraction]={}
+		result[fraction][sample]=df
+	return result
 
 
 def pre_step(file_dir,sample_file,bin_precision):
@@ -168,7 +166,7 @@ def pre_step(file_dir,sample_file,bin_precision):
 		fraction_name = str(booksheet.cell_value(i,2))
 		file_class_dics[raw_name] = sample_name
 		file_fraction_dics[raw_name] = fraction_name
-	result_dir='pre_result'
+	result={}
 	for raw_file in os.listdir(file_dir):
 		print('step_1:',raw_file)
 		file=open(file_dir+'/'+raw_file,'r')
@@ -178,4 +176,5 @@ def pre_step(file_dir,sample_file,bin_precision):
 		sample=file_class_dics[file_begin]
 		fraction=file_fraction_dics[file_begin]
 		file.close()
-		sample_pretreat(file_dir+'/'+raw_file,sample,fraction,result_dir,file_class_dics,file_fraction_dics,bin_precision)
+		result=sample_pretreat(file_dir+'/'+raw_file,sample,fraction,file_class_dics,file_fraction_dics,result,bin_precision)
+	return result

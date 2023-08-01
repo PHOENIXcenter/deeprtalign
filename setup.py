@@ -5,7 +5,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
 	name='deeprtalign',
-	version="1.1.3",
+	version="1.2.0",
 	packages=find_packages(),
 	python_requires='>=3.4',
 	install_requires=[
@@ -14,7 +14,7 @@ setup(
 		],
 
 	package_data={
-		'deeprtalign': ['data/base.npy','data/params.pt']
+		'deeprtalign': ['data/params.pt']
 		},
 
 	author='Yi Liu',
@@ -23,5 +23,8 @@ setup(
 	long_description=long_description,
 	long_description_content_type='text/markdown',
 	url='https://github.com/FineLiu/deeprtalign',
-	license='GPLv3'
+	license='GPLv3',
+	entry_points = {
+		'console_scripts': ['deeprtalign=deeprtalign.__main__:get_arg_and_run']
+		}
 )

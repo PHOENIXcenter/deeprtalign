@@ -15,37 +15,39 @@ import math
 import os
 import re
 
-def collect_information(bin_precision,bin_width,percent,cut,keep_best):
-	folder='mass_align_all'
-	
-	
+def collect_information(bin_precision,bin_width,percent,pre_result,cut,keep_best):
 	result_folder='mass_align_all_information'
 	if not os.path.exists(result_folder):
 		os.mkdir(result_folder)
-	
-	
-	result_df=pd.DataFrame()
-	total_number=len(os.listdir(folder))
+		
+	result_file=open(result_folder+'/information_all.csv','w')
+	total_number=len(list(pre_result.keys()))
 	n=0
 	m=0
-	k=1
-	for file in os.listdir(folder):
+	for mass_name in list(pre_result.keys()):
 		n=n+1
-		m=m+1
-		file_path=folder+'/'+file
-		window=file.split('.csv')[0]
+		window=mass_name
 		print('step_6:',n,window,total_number)
-		file_df=pd.read_csv(file_path,converters={'Tmz':str})
+		file_df=pre_result[mass_name]
 		file_df=file_df[file_df['status']=='use']
+		if len(file_df)==0:
+			continue
 		grouped=file_df.groupby('group')
 		for name,group in grouped:
 			window_group=window+'_'+str(name)
 			group['group']=window_group
-			if len(result_df)==0:
-				result_df=group
-			else:
-				result_df=pd.concat([result_df,group],ignore_index=True,sort=False)
-	result_df.to_csv(result_folder+'/information_all.csv',index=False)
+			for group_index in group.index:
+				group_line=group.loc[[group_index]]
+				m=m+1
+				if m==1:
+					result_s=group_line.to_string(justify='left',index=False)+'\n'
+				else:
+					result_s=group_line.to_string(justify='left',header=False,index=False)+'\n'
+				result_s=re.sub(' +',',',result_s)
+				result_s=re.sub(',\n','\n',result_s)
+				result_s=re.sub('^,+','',result_s)
+				result_file.write(result_s)
+	result_file.close()
 	df=pd.read_csv(result_folder+'/information_all.csv')
 	df.sort_values(by='adj_score',ascending=False,inplace=True)
 	df.reset_index(inplace=True,drop=True)
@@ -66,6 +68,9 @@ def collect_information(bin_precision,bin_width,percent,cut,keep_best):
 	df_target=df_target[df_target['adj_score']>this_adj_score]
 	sample_number=len(df_target['sample'].value_counts())
 	
+	if len(df_target)==0:
+		df_target.to_csv(result_folder+'/information_target.csv',index=False)
+		return 0
 	
 	grouped=df_target.groupby('group')
 	
@@ -77,10 +82,6 @@ def collect_information(bin_precision,bin_width,percent,cut,keep_best):
 		if len(group)<2:
 			df_target.drop(list(group.index),inplace=True)
 			continue
-	if len(df_target)==0:
-		df_target.to_csv(result_folder+'/information_target.csv',index=False)
-		return 0
-	
 	if keep_best==1:
 		df_target.sort_values(by='adj_score',ascending=False,inplace=True)
 			
@@ -93,8 +94,6 @@ def collect_information(bin_precision,bin_width,percent,cut,keep_best):
 		for name,group in grouped:
 			n=n+1
 			print('step_6: second combining',n,'/',total_number)
-			if not len(group)==2:
-				continue
 			for index in group.index:
 				this_mz=group.loc[index]['mz']
 				this_intensity=group.loc[index]['intensity']

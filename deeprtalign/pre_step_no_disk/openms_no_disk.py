@@ -14,63 +14,65 @@ import math
 import xlrd
 import pandas as pd
 
-def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision):
+def sample_pretreat(filepath,sample,fraction,result,bin_precision):
 	file=open(filepath,'r')
 	file.readline()
 	i=0
 	j=0
-	XICs={'charge':[],'scan_number':[],'time':[],'rt_start':[],'rt_end':[],'intensity':[],'goodness_fit':[],'mz':[]}
+	XICs={'time':[],'mz':[],'charge':[],'intensity':[],'quality':[],'width':[],'rt_start':[],'rt_end':[]}
 	while True: 
 		oneline=file.readline()
 		if not oneline:
 			break
+		if not oneline.find('#')==-1:
+			continue
 		n=1
 		while j<len(oneline):
 			if oneline[j]=='\t' or j==len(oneline)-1:
-				if n==1:
-					XICs['charge'].append(int(oneline[i:j]))
+				if n==2:
+					XICs['time'].append(float(oneline[i:j])/60)
 					n=n+1
 					j=j+1
 					i=j
 					continue
-				if n==2:
-					XICs['scan_number'].append(int(oneline[i:j]))
+				if n==3:
+					XICs['mz'].append(float(oneline[i:j]))
 					n=n+1
 					j=j+1
 					i=j
 					continue
 				if n==4:
-					XICs['time'].append(float(oneline[i:j]))
-					n=n+1
-					j=j+1
-					i=j
-					continue
-				if n==5:
-					XICs['rt_start'].append(float(oneline[i:j]))
-					n=n+1
-					j=j+1
-					i=j
-					continue
-				if n==6:
-					XICs['rt_end'].append(float(oneline[i:j]))
-					n=n+1
-					j=j+1
-					i=j
-					continue
-				if n==10:
 					XICs['intensity'].append(float(oneline[i:j]))
 					n=n+1
 					j=j+1
 					i=j
 					continue
-				if n==11:
-					XICs['goodness_fit'].append(float(oneline[i:j]))
+				if n==5:
+					XICs['charge'].append(int(oneline[i:j]))
 					n=n+1
 					j=j+1
 					i=j
 					continue
-				if n==13:
-					XICs['mz'].append(float(oneline[i:j]))
+				if n==6:
+					XICs['width'].append(float(oneline[i:j]))
+					n=n+1
+					j=j+1
+					i=j
+					continue
+				if n==7:
+					XICs['quality'].append(float(oneline[i:j]))
+					n=n+1
+					j=j+1
+					i=j
+					continue
+				if n==10:
+					XICs['rt_start'].append(float(oneline[i:j])/60)
+					n=n+1
+					j=j+1
+					i=j
+					continue
+				if n==11:
+					XICs['rt_end'].append(float(oneline[i:j])/60)
 					i=0
 					j=0
 					break
@@ -88,32 +90,32 @@ def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision):
 		erro_files.close()
 		return False
 	df=pd.DataFrame(XICs)
-	drop_negative=df[(df['intensity']<0)].index
-	df.drop(drop_negative,inplace=True)
+	#drop_negative=df[df['charge']==1].index
+	#df.drop(drop_negative,inplace=True)
 	Tmz=df['mz']
 	df.loc[:,'Tmz']=Tmz
-	base=189346000000
+	base=314448000000
 	sum_of_intensity=df['intensity'].sum()
 	Tintensity=[math.log2(a/sum_of_intensity*base)for a in df['intensity']]
 	Tintensity10=[math.log10(a/sum_of_intensity*base)for a in df['intensity']]
-	Pintensity=[a/sum_of_intensity for a in df['intensity']]
-	#intensity=[(a/sum_of_intensity*base)for a in df['intensity']]
-	#df.loc[:,'intensity']=intensity
 	df.loc[:,'Tintensity']=Tintensity
-	df.loc[:,'Tintensity10']=Tintensity10
-	df.loc[:,'Pintensity']=Pintensity
-	drop_zero=df[df['Tintensity']<=0].index
-	df.drop(drop_zero,inplace=True)
 	#Tmass=[str(round(c*float(d)-c*1.007276,2)) for c,d in zip(df['charge'],df['Tmz'])]
 	Tmass=[str(round(a,bin_precision))for a in df['mz']]
 	df.loc[:,'Tmass']=Tmass
-	if not os.path.exists(result_dir):
-		os.mkdir(result_dir)
-	if not os.path.exists(result_dir+'/'+fraction):
-		os.mkdir(result_dir+'/'+fraction)
-	df.to_csv(result_dir+'/'+fraction+'/'+sample+'.csv',index=False)
+	df.loc[:,'Tintensity10']=Tintensity10
+	Pintensity=[a/sum_of_intensity for a in df['intensity']]
+	df.loc[:,'Pintensity']=Pintensity
+	drop_zero=df[df['Tintensity']<=0].index
+	df.drop(drop_zero,inplace=True)
+	if fraction in result.keys():
+		result[fraction][sample]=df
+	else:
+		result[fraction]={}
+		result[fraction][sample]=df
 	file.close()
-	return True
+	return result
+
+
 
 def pre_step(file_dir,sample_file,bin_precision):
 	workbook = xlrd.open_workbook(sample_file)
@@ -127,7 +129,7 @@ def pre_step(file_dir,sample_file,bin_precision):
 		fraction_name = str(booksheet.cell_value(i,2))
 		file_class_dics[raw_name] = sample_name
 		file_fraction_dics[raw_name] = fraction_name
-	result_dir='pre_result'
+	result={}
 	for file in os.listdir(file_dir):
 		if not file.split('.')[0] in file_class_dics.keys():
 				print('file not in list!')
@@ -135,5 +137,5 @@ def pre_step(file_dir,sample_file,bin_precision):
 		print('step_1:',file)
 		sample=file_class_dics[file.split('.')[0]]
 		fraction=file_fraction_dics[file.split('.')[0]]
-		sample_pretreat(file_dir+'/'+file,sample,fraction,result_dir,bin_precision)
-
+		result=sample_pretreat(file_dir+'/'+file,sample,fraction,result,bin_precision)
+	return result

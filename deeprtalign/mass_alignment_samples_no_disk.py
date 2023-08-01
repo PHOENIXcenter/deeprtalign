@@ -11,14 +11,10 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from torch import optim
-import torch.utils.data as Data
 import numpy as np
 import pandas as pd
 import os
 import shutil
-import multiprocessing as mp
 import pkg_resources
 import random
 
@@ -47,100 +43,99 @@ class MatchingNetwork(nn.Module):
 		
 		return output
 
-def mass_alignment(mass_folder,file,result_folder,total_fraction_number,total_sample_number,max_time,max_log_intensity,percent,done_mass_folder):
+def mass_alignment(pre_result,result,total_fraction_number,total_sample_number,max_time,max_log_intensity,percent):
 	pd.set_option('mode.chained_assignment', None)
-	if not os.path.exists(result_folder):
-		os.mkdir(result_folder)
+	total_number=len(pre_result)
+	mass_name_number=0
+	for mass_name in pre_result.keys():
+		mass_df=pre_result[mass_name]
+		mass_name_number=mass_name_number+1
+		print('step_5:',mass_name_number,mass_name,total_number)
+		sample_fraction_list=mass_df[['sample','fraction']].value_counts()
+		if len(sample_fraction_list)<(total_sample_number*total_fraction_number*percent):
+			continue
+		
+		sample_list=mass_df[['sample']].value_counts()
+		if len(sample_list)<2:
+			continue
+		
+		mass_df.sort_values(by='Ttime',ascending=False,inplace=True)
+		r_n_1=random.randint(0, len(sample_list)-1)
+		sample_decoy_1=sample_list.index[r_n_1][0]
+		mass_df_decoy_1=mass_df[mass_df['sample']==sample_decoy_1].copy()
+		mass_df_decoy_1.loc[:,'sample']='decoy_sample_1'
+		mass_df_decoy_1.loc[:,'Ttime']=mass_df_decoy_1['Ttime'].apply(lambda x: 40-x if x<40 else 120-x)
+		mass_df_decoy_1.loc[:,'Ttime']=mass_df_decoy_1['Ttime'].apply(lambda x: 80-x)
+		sample_decoy_2=sample_list.index[r_n_1][0]
+		mass_df_decoy_2=mass_df[mass_df['sample']==sample_decoy_2].copy()
+		mass_df_decoy_2.loc[:,'sample']='decoy_sample_2'
+		mass_df_decoy=pd.concat([mass_df_decoy_1,mass_df_decoy_2],ignore_index=True)
+		
+		mass_df.loc[:,'status']='unuse'
+		mass_df.loc[:,'group']=-1
+		mass_df.loc[:,'mz_error']=-1
+		mass_df.loc[:,'score']=0
+		
+		mass_df_decoy.loc[:,'status']='unuse'
+		mass_df_decoy.loc[:,'group']=-1
+		mass_df_decoy.loc[:,'mz_error']=-1
+		mass_df_decoy.loc[:,'score']=0
+		
+		aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(mass_name,mass_df,max_time,max_log_intensity)
 	
-	mass_df=pd.read_csv(mass_folder+'/'+file,converters={'Tmass':str})
-	sample_fraction_list=mass_df[['sample','fraction']].value_counts()
-	if len(sample_fraction_list)<(total_sample_number*total_fraction_number*percent):
-		shutil.move(mass_folder+'/'+file, done_mass_folder)
-		return 0
+		for group in aligned_result.index:
+			for sample in list(aligned_result.columns):
+				sample_index=aligned_result.loc[group][sample]
+				score=aligned_result_score.loc[group][sample]
+				mz_error=aligned_result_mz_error.loc[group][sample]
+				if np.isnan(sample_index):
+					continue
+				mass_df.loc[sample_index,'group']=group
+				mass_df.loc[sample_index,'status']='use'
+				mass_df.loc[sample_index,'score']=score
+				mass_df.loc[sample_index,'mz_error']=mz_error
+		
+		
+		#sample_list=mass_df_decoy[['sample','fraction']].value_counts()
+		
+		aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(mass_name,mass_df_decoy,max_time,max_log_intensity)
 	
-	sample_list=mass_df[['sample']].value_counts()
-	if len(sample_list)<2:
-		shutil.move(mass_folder+'/'+file, done_mass_folder)
-		return 0
-	
-	mass_df.sort_values(by='Ttime',ascending=False,inplace=True)
-	r_n_1=random.randint(0, len(sample_list)-1)
-	sample_decoy_1=sample_list.index[r_n_1][0]
-	mass_df_decoy_1=mass_df[mass_df['sample']==sample_decoy_1].copy()
-	mass_df_decoy_1.loc[:,'sample']='decoy_sample_1'
-	mass_df_decoy_1.loc[:,'Ttime']=mass_df_decoy_1['Ttime'].apply(lambda x: 40-x if x<40 else 120-x)
-	mass_df_decoy_1.loc[:,'Ttime']=mass_df_decoy_1['Ttime'].apply(lambda x: 80-x)
-	sample_decoy_2=sample_list.index[r_n_1][0]
-	mass_df_decoy_2=mass_df[mass_df['sample']==sample_decoy_2].copy()
-	mass_df_decoy_2.loc[:,'sample']='decoy_sample_2'
-	mass_df_decoy=pd.concat([mass_df_decoy_1,mass_df_decoy_2],ignore_index=True)
-	
-	mass_df.loc[:,'status']='unuse'
-	mass_df.loc[:,'group']=-1
-	mass_df.loc[:,'mz_error']=-1
-	mass_df.loc[:,'score']=0
-	
-	mass_df_decoy.loc[:,'status']='unuse'
-	mass_df_decoy.loc[:,'group']=-1
-	mass_df_decoy.loc[:,'mz_error']=-1
-	mass_df_decoy.loc[:,'score']=0
-	
-	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df,max_time,max_log_intensity)
-
-	for group in aligned_result.index:
-		for sample in list(aligned_result.columns):
-			sample_index=aligned_result.loc[group][sample]
-			score=aligned_result_score.loc[group][sample]
-			mz_error=aligned_result_mz_error.loc[group][sample]
-			if np.isnan(sample_index):
-				continue
-			mass_df.loc[sample_index,'group']=group
-			mass_df.loc[sample_index,'status']='use'
-			mass_df.loc[sample_index,'score']=score
-			mass_df.loc[sample_index,'mz_error']=mz_error
-	
-	
-	#sample_list=mass_df_decoy[['sample','fraction']].value_counts()
-	
-	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df_decoy,max_time,max_log_intensity)
-
-	for group in aligned_result.index:
-		for sample in list(aligned_result.columns):
-			sample_index=aligned_result.loc[group][sample]
-			score=aligned_result_score.loc[group][sample]
-			mz_error=aligned_result_mz_error.loc[group][sample]
-			if np.isnan(sample_index):
-				continue
-			mass_df_decoy.loc[sample_index,'group']=group
-			mass_df_decoy.loc[sample_index,'status']='use'
-			mass_df_decoy.loc[sample_index,'score']=score
-			mass_df_decoy.loc[sample_index,'mz_error']=mz_error
-	
-	mass_df=pd.concat([mass_df,mass_df_decoy],ignore_index=True)
-	mass_df.sort_values(by='Ttime',ascending=True,inplace=True)
-	grouped=mass_df.groupby('sample')
-	for sample,mass_df_sample in grouped:
-		n=0
-		while n<len(mass_df_sample):
-			status=mass_df_sample.iloc[n]['status']
-			if status=='unuse':
+		for group in aligned_result.index:
+			for sample in list(aligned_result.columns):
+				sample_index=aligned_result.loc[group][sample]
+				score=aligned_result_score.loc[group][sample]
+				mz_error=aligned_result_mz_error.loc[group][sample]
+				if np.isnan(sample_index):
+					continue
+				mass_df_decoy.loc[sample_index,'group']=group
+				mass_df_decoy.loc[sample_index,'status']='use'
+				mass_df_decoy.loc[sample_index,'score']=score
+				mass_df_decoy.loc[sample_index,'mz_error']=mz_error
+		
+		mass_df=pd.concat([mass_df,mass_df_decoy],ignore_index=True)
+		mass_df.sort_values(by='Ttime',ascending=True,inplace=True)
+		grouped=mass_df.groupby('sample')
+		for sample,mass_df_sample in grouped:
+			n=0
+			while n<len(mass_df_sample):
+				status=mass_df_sample.iloc[n]['status']
+				if status=='unuse':
+					n=n+1
+					continue
+				index=mass_df_sample.iloc[[n]].index[0]
+				scores=[]
+				for m in range(n-2,n+3):
+					if m<0 or m>=len(mass_df_sample):
+						scores.append(0)
+					else:
+						score=mass_df_sample.iloc[m]['score']
+						if m==n:
+							score=6*score
+						scores.append(score)
+				mass_df.loc[index,'adj_score']=np.mean(scores)
 				n=n+1
-				continue
-			index=mass_df_sample.iloc[[n]].index[0]
-			scores=[]
-			for m in range(n-2,n+3):
-				if m<0 or m>=len(mass_df_sample):
-					scores.append(0)
-				else:
-					score=mass_df_sample.iloc[m]['score']
-					if m==n:
-						score=6*score
-					scores.append(score)
-			mass_df.loc[index,'adj_score']=np.mean(scores)
-			n=n+1
-	mass_df.to_csv(result_folder+'/'+file,index=False)
-	shutil.move(mass_folder+'/'+file, done_mass_folder)
-	return 1
+		result[mass_name]=mass_df
+	return result
 
 def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 	pd.set_option('mode.chained_assignment', None)
@@ -420,49 +415,9 @@ def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_resul
 	return matrix,score_result
 
 
+def run_alignment(max_time,max_log_intensity,percent,total_fraction_number,total_sample_number,pre_result):
+	result={}
+	pd.set_option('mode.chained_assignment', None)
 	
-def run_alignment(processing_number,max_time,max_log_intensity,percent):
-	mass_folder='shift_result_bins_filter'
-	done_mass_folder='shift_result_bins_filter_done'
-	result_folder='mass_align_all'
-
-	fraction_1=os.listdir('pre_result')[0]
-	total_fraction_number=len(os.listdir('pre_result'))
-	total_sample_number=len(os.listdir('pre_result/'+fraction_1))
-	
-	
-	if not os.path.exists(result_folder):
-		os.mkdir(result_folder)
-	if not os.path.exists(done_mass_folder):
-		os.mkdir(done_mass_folder)
-	
-	pool_arg=[]
-	for file in os.listdir(mass_folder):
-		file_arg=[]
-		file_arg.append(mass_folder)
-		file_arg.append(file)
-		file_arg.append(result_folder)
-		file_arg.append(total_fraction_number)
-		file_arg.append(total_sample_number)
-		file_arg.append(max_time)
-		file_arg.append(max_log_intensity)
-		file_arg.append(percent)
-		file_arg.append(done_mass_folder)
-		pool_arg.append(file_arg)
-	print('step_5: running')
-	n=1000
-	m=0
-	while len(pool_arg)>n:
-		m=m+1
-		sub_pool_arg=pool_arg[:n]
-		del pool_arg[:n]
-		pool=mp.Pool(processes=processing_number,maxtasksperchild=10)
-		result = pool.starmap_async(mass_alignment,sub_pool_arg)
-		pool.close()
-		pool.join()
-		print('step_5:',str(m*n),'finish')
-	pool=mp.Pool(processes=processing_number,maxtasksperchild=10)
-	result = pool.starmap_async(mass_alignment,pool_arg)
-	pool.close()
-	pool.join()
-	print('step_5: all finish')
+	result=mass_alignment(pre_result,result,total_fraction_number,total_sample_number,max_time,max_log_intensity,percent)
+	return result

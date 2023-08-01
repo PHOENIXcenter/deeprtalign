@@ -12,19 +12,14 @@
 import pandas as pd
 import os
 
-def mass_filter(min_time_diff):
-	file_dir='shift_result_bins'
-	result_dir='shift_result_bins_filter'
-	
-	if not os.path.exists(result_dir):
-		os.mkdir(result_dir)
-	
-	total_number=len(os.listdir(file_dir))
+def mass_filter(min_time_diff,pre_result):
+	result={}
+	total_number=len(pre_result)
 	n=0
-	for file in os.listdir(file_dir):
+	for mass_name in pre_result.keys():
 		n=n+1
-		print('step_4:',n,file,total_number)
-		df=pd.read_csv(file_dir+'/'+file,converters={'Tmass':str})
+		print('step_4:',n,mass_name,total_number)
+		df=pre_result[mass_name]
 		grouped=df.groupby(['sample','fraction','charge'])
 		for name,group in grouped:
 			group_sort=group.sort_values(by='intensity',ascending=False).copy()
@@ -42,4 +37,5 @@ def mass_filter(min_time_diff):
 							m=m+1
 							group_sort.drop(index,axis=0,inplace=True)
 							df.drop(index,axis=0,inplace=True)
-		df.to_csv(result_dir+'/'+file,index=False)
+		result[mass_name]=df
+	return result
