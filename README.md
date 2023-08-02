@@ -14,7 +14,7 @@ DeepRTAlign is not dependent on a specific operating system, we have tested it o
 
 ## Getting Started
 
-1. Feature lists and sample list should be prepared before running DeepRTAlign. Feature lists are the output of feature extraction tools (DeepRTAlign supports Dinosaur, OpenMS, MaxQuant, XICFinder and any other text list containing m/z, charge, RT and Intensity information ). The sample list is an excel file recording the correspondences between feature files  and sample names. You can find the test data in the example_files folder. 
+1. Feature lists and sample file should be prepared before running DeepRTAlign. Feature lists are the output of feature extraction tools (DeepRTAlign supports Dinosaur, OpenMS, MaxQuant, XICFinder and any other text list containing m/z, charge, RT and Intensity information ). The sample file is an excel file recording the correspondences between feature lists and sample names. You can find the test data in the example_files folder. 
 
    Note that if you use MaxQuant as the feature extraction tool, you should use the allPeptides.txt as the input file or files, and the sample list should correspond to the first column of allPeptides.txt file. DO NOT use "allPeptdes.txt" as the file name in sample list if you use MaxQuant. If you use the old version of MaxQuant (<2.0),please check the 7th column, delete the "Resolution" column if you see it (in MaxQuant v2.0, "Resolution" column is not exists, so we have changed corresponding code).
 
@@ -25,12 +25,14 @@ DeepRTAlign is not dependent on a specific operating system, we have tested it o
                            the feature extraction method, support Dinosaur,
                            XICFinder, OpenMS, MaxQuant and any other text list containing m/z, charge, RT and Intensity information
    --file_dir FILE_DIR, -f FILE_DIR
-                           the data folder
+                           the data folder containing feature lists
    --sample_file SAMPLE_FILE, -s SAMPLE_FILE
                            the sample file
    ```
 
-      As an example, to handle the Dinosaur test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx ` . On a normal computer, this will take about 30 minutes. We strongly recommend users to use the `-pn` parameter according to the CPU core numbers. This will make it run much faster.
+      As an example, to handle the Dinosaur test data in example_files folder, you can **create a new folder** and put the file_dir (containing feature lists from feature extraction tool) and sample_file.xlsx in, **switch the working directory to this folder**, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx ` . On a normal computer, this will take about 30 minutes. We strongly recommend users to use the `-pn` parameter according to the CPU core numbers. This will make it run much faster.
+
+
 
       If you choose TXT method (txt file separated by '\t') or CSV method (txt file separated by ','), you must provide optional arguments `--mz_col` `--charge_col` `--rt_col` `--intensity_col`.
 
@@ -83,7 +85,11 @@ DeepRTAlign is not dependent on a specific operating system, we have tested it o
                            result for each feature
    ```  
    processing_number (int, default 1) depends on your hardware. percent (float:0-1, default 0) is a threshold, DeepRTAlign will skip the bins with sample numbers below the percent of total sample numbers. time_window (float, default 1) depends on your chromatography, 1 min is the parameter we used in training and is suitable for most situations. bin_width (float, default 0.03) and bin_precision (int, default 2) depends on your feature extraction parameters, bin_width is the m/z window size, and bin_precision is the number of decimal places used in this step. Only the features in the same m/z window will be aligned, default values are suitable for most situations. dict_size (int, default 1024) depends on your memory size, default 1024MB. min_time_diff (float, default 0) is the time window (min) used to used to filter the feature, only keep the highest feature within a time window. max_time (float, default 5) and max_log_intensity (float, default 3) are used for reducing calculation. disk_mode will write temp files on your disk, and is not used by default. If you want to keep the temp files, set the keep_temp (int, default 0) to 1. In disk_mode, you can begin from any begin_step (int, default 1). step 1: preprocessing of input files, step 2: coarse alignment, step 3: bining, step 4: filtering, step 5: alignment, step 6: generating result file. fdr (float, 0-1, default 0.01) is the threshold used in quality control part. mz_col, rt_col, intensity_col and charge_col are used in TXT method and CSV method, please note they are counted from 1. A feature may exist in multiple groups after alignment and quality control, keep_best=1 (default) will only keey the group with the highest adj_score for each feature, or you can set keep_best=0, and keep all candidates.  
-3. The results will output to the mass_align_all_information folder.If you set kt to 0 (default), there will be only one file in the mass_align_all_information folder: information_target.csv (target results after QC). If you set kt to 1, there will be two files in the mass_align_all_information folder: information_target.csv (target results after QC) and information_all.csv (results before QC, and containing decoy samples).
+3. **The results will output to the mass_align_all_information folder in the current working directory**. If you set kt to 0 (default), there will be only one file in the mass_align_all_information folder: information_target.csv (target results after QC). If you set kt to 1, there will be two files in the mass_align_all_information folder: information_target.csv (target results after QC) and information_all.csv (results before QC, and containing decoy samples).
+
+## Note
+
+Do not run the different projects under a same folder, the results will be overwritten. That's why we strongly recommend **creating a new folder** when running a new project.
 
 ## Result Description
 In result files, each line represent a feature, the meaning of each column is as follows.
@@ -103,24 +109,25 @@ In the default workflow, adj_score will be used for quality control and for drop
 
 ### Other columns
 Other columns are intermediate results and can be ignored.
-## Note
-
-Do not run the different projects under a same folder, the results will be overwritten.
 
 ## Demos
 The demos are in the example_files folder. We use part of features in UPS2-Y dataset as examples. On a normal computer, each work will take about 30 minutes. We strongly recommend users to use the `-pn` parameter according to the CPU core numbers. This will make it run much faster.
 
 We provide Dinosaur, MaxQuant, OpenMS and XICFinder results for users to test DeepRTAlign.
 
-To handle the Dinosaur test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
+To handle the Dinosaur test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file.xlsx in, **switch the working directory to this folder**, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder in the current working directory.
 
-To handle the MaxQuant test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m MaxQuant -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
+To handle the MaxQuant test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file.xlsx in,  **switch the working directory to this folder**, then use command `deeprtalign -m MaxQuant -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder in the current working directory.
 
-To handle the OpenMS test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m OpenMS -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
+To handle the OpenMS test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file.xlsx in,  **switch the working directory to this folder**, then use command `deeprtalign -m OpenMS -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder in the current working directory.
 
-To handle the XICFinder test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m XICFinder -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
+To handle the XICFinder test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file.xlsx in,  **switch the working directory to this folder**, then use command `deeprtalign -m XICFinder -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder in the current working directory.
 
-Expected output is in expected_output folder.
+**The results will output to the mass_align_all_information folder in the current working directory**.
+
+Do not run the different projects under a same folder, the results will be overwritten. That's why we strongly recommend **creating a new folder** when running a new project.
+
+Expected output is in the expected_output folder. Since the decoy samples are randomly selected in QC, your test results may be slightly different from what we provide.
 
 ## Code for the experiments
 Code for comparing with other alignment tools are in this folder.
