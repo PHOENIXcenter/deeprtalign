@@ -8,7 +8,7 @@ DeepRTAlign is a deep learning-based retention time alignment tool for large coh
 
 1. Install Python3.
 2. Install Pytorch CPU version, please refer to https://pytorch.org/.
-3. Use `pip install deeprtalign` to install deeprtalign OR download `deeprtalign-1.2.1-py3-none-any.whl` from github, and use `pip install deeprtalign-1.2.1-py3-none-any.whl` to install deeprtalign. This step will take 3-4 minutes.
+3. Use `pip install deeprtalign` to install deeprtalign OR download `deeprtalign-1.2.1-py3-none-any.whl` from github [releases](https://github.com/PHOENIXcenter/deeprtalign/releases), and use `pip install deeprtalign-1.2.1-py3-none-any.whl` to install deeprtalign. This step will take 3-4 minutes.
 
 DeepRTAlign is not dependent on a specific operating system, we have tested it on Windows 10, Ubuntu 18.04 and macOS 12.1.
 
@@ -30,7 +30,7 @@ DeepRTAlign is not dependent on a specific operating system, we have tested it o
                            the sample file
    ```
 
-      As an example, to handle the Dinosaur test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx ` . On a normal computer, this will take about 30 minutes. We strongly recommend users to use the `-pn` parameter according to the CPU core numbers. This will make it run much faster.
+      As an example, to handle the Dinosaur test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file in, **switch the working directory to this folder**, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx ` . On a normal computer, this will take about 30 minutes. We strongly recommend users to use the `-pn` parameter according to the CPU core numbers. This will make it run much faster.
 
       If you choose TXT method (txt file separated by '\t') or CSV method (txt file separated by ','), you must provide optional arguments `--mz_col` `--charge_col` `--rt_col` `--intensity_col`.
 
@@ -56,7 +56,7 @@ DeepRTAlign is not dependent on a specific operating system, we have tested it o
    --min_time_diff MIN_TIME_DIFF, -mtd MIN_TIME_DIFF
                            min, the time window used to filter the features, only keep
                            the highest feature
-    --max_mz MAX_MZ, -mm MAX_MZ
+   --max_mz MAX_MZ, -mm MAX_MZ
                            ppm, the m/z threshold used to filter the features, only align features within the threshold                        
    --max_time MAX_TIME, -mt MAX_TIME
                            min, the time threshold used to filter the features, only
@@ -107,19 +107,19 @@ In the default workflow, adj_score will be used for quality control and for remo
 Other columns are intermediate results and can be ignored.
 ## Note
 
-Do not run the different projects under a same folder, the results will be overwritten.
+Do not run the different projects under a same folder, the results will be overwritten. That is why we recommend **create a new folder**.
 
 ## Demo
 The demo are in the example_files folder. We use part of features in UPS2-Y dataset as examples. On a normal computer, each work will take about 30 minutes. We strongly recommend users to use the `-pn` parameter according to the CPU core numbers. This will make it run much faster.
 We provide Dinosaur, MaxQuant, OpenMS and XICFinder results for user to test DeepRTAlign.
 
-To handle the Dinosaur test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
+To handle the Dinosaur test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file in, **switch the working directory to this folder**, then use command `deeprtalign -m Dinosaur -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
 
-To handle the MaxQuant test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m MaxQuant -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
+To handle the MaxQuant test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file in, **switch the working directory to this folder**, then use command `deeprtalign -m MaxQuant -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
 
-To handle the OpenMS test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m OpenMS -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
+To handle the OpenMS test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file in, **switch the working directory to this folder**, then use command `deeprtalign -m OpenMS -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
 
-To handle the XICFinder test data in example_files folder, you can create a new folder and put the file_dir (containing result files from feature extraction tool ) and sample_file in, switch the working directory to this folder, then use command `deeprtalign -m XICFinder -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
+To handle the XICFinder test data in example_files folder, you can **create a new folder** and put the file_dir (containing result files from feature extraction tool ) and sample_file in, **switch the working directory to this folder**, then use command `deeprtalign -m XICFinder -f file_dir -s sample_file.xlsx `. The results will output to the mass_align_all_information folder.
 
 Expected output is in expected_output folder.
 
