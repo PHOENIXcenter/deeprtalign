@@ -43,7 +43,7 @@ class MatchingNetwork(nn.Module):
 		
 		return output
 
-def mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_number,max_time,max_log_intensity,percent,done_mass_folder):
+def mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_number,max_mz,max_time,max_log_intensity,percent,done_mass_folder):
 	if not os.path.exists(result_folder):
 		os.mkdir(result_folder)
 	
@@ -82,7 +82,7 @@ def mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_
 		mass_df_decoy.loc[:,'mz_error']=-1
 		mass_df_decoy.loc[:,'score']=0
 		
-		aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df,max_time,max_log_intensity)
+		aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df,max_mz,max_time,max_log_intensity)
 	
 		for group in aligned_result.index:
 			for sample in list(aligned_result.columns):
@@ -99,7 +99,7 @@ def mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_
 		
 		#sample_list=mass_df_decoy[['sample','fraction']].value_counts()
 		
-		aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df_decoy,max_time,max_log_intensity)
+		aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df_decoy,max_mz,max_time,max_log_intensity)
 	
 		for group in aligned_result.index:
 			for sample in list(aligned_result.columns):
@@ -138,7 +138,7 @@ def mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_
 		mass_df.to_csv(result_folder+'/'+file,index=False)
 		shutil.move(mass_folder+'/'+file, done_mass_folder)
 		
-def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
+def get_aligned_result(mass_name,mass_df,max_mz,max_time,max_log_intensity):
 	pd.set_option('mode.chained_assignment', None)
 	params_file = pkg_resources.resource_filename('deeprtalign', 'data/params.pt')
 	net = MatchingNetwork()
@@ -180,6 +180,7 @@ def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 		n=0
 		while n<len(group):
 			sample_n=group.iloc[n]['sample']
+			mz_n=group.iloc[n]['Tmz']
 			time_n=group.iloc[n]['Ttime']
 			intensity_n=group.iloc[n]['Tintensity']
 			begin_index=group.iloc[[n]].index[0]
@@ -190,6 +191,7 @@ def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 			m=n+1
 			while m<len(group):
 				sample_m=group.iloc[m]['sample']
+				mz_m=group.iloc[m]['Tmz']
 				time_m=group.iloc[m]['Ttime']
 				intensity_m=group.iloc[m]['Tintensity']
 				if sample_n==sample_m:
@@ -200,11 +202,14 @@ def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 				if abs(intensity_m-intensity_n)>max_log_intensity:
 					m=m+1
 					continue
+				if abs((mz_n-mz_m)/mz_m*1000000)>max_mz:
+					m=m+1
+					continue
 				next_index=group.iloc[[m]].index[0]
 				next_sample_df=sample_group_dic[sample_m+'_'+str(name[0])+'_'+str(name[1])]
 				k=next_sample_df.index.get_loc(next_index)
 				next_sample_mass_df=next_sample_df.iloc[k-2:k+3]
-				matrix,score_result=get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension,max_time,max_log_intensity)
+				matrix,score_result=get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension)
 				m=m+1
 			n=n+1
 	aligned_result=pd.DataFrame()
@@ -372,7 +377,7 @@ def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 
 
 
-def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension,max_time,max_log_intensity):
+def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension):
 	pd.set_option('mode.chained_assignment', None)
 	begin_sample=begin_sample_mass_df.iloc[2]['sample']
 	next_sample=next_sample_mass_df.iloc[2]['sample']
@@ -416,7 +421,7 @@ def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_resul
 	return matrix,score_result
 
 
-def run_alignment(max_time,max_log_intensity,percent):
+def run_alignment(max_mz,max_time,max_log_intensity,percent):
 	mass_folder='shift_result_bins_filter'
 	done_mass_folder='shift_result_bins_filter_done'
 	result_folder='mass_align_all'
@@ -431,4 +436,4 @@ def run_alignment(max_time,max_log_intensity,percent):
 	if not os.path.exists(done_mass_folder):
 		os.mkdir(done_mass_folder)
 	
-	mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_number,max_time,max_log_intensity,percent,done_mass_folder)
+	mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_number,max_mz,max_time,max_log_intensity,percent,done_mass_folder)

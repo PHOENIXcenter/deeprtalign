@@ -17,14 +17,14 @@ import pandas as pd
 def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision,mz_col,rt_col,intensity_col,charge_col):
 	file=open(filepath,'r')
 	file.readline()
-	i=0
-	j=0
 	XICs={'charge':[],'time':[],'intensity':[],'mz':[]}
 	while True: 
 		oneline=file.readline()
 		if not oneline:
 			break
 		n=1
+		i=0
+		j=0
 		while j<len(oneline):
 			if oneline[j]==',' or j==len(oneline)-1:
 				if n==mz_col:
@@ -47,9 +47,10 @@ def sample_pretreat(filepath,sample,fraction,result_dir,bin_precision,mz_col,rt_
 					continue
 				if n==charge_col:
 					XICs['charge'].append(float(oneline[i:j]))
-					i=0
-					j=0
-					break
+					n=n+1
+					j=j+1
+					i=j
+					continue
 				n=n+1
 				j=j+1
 				i=j

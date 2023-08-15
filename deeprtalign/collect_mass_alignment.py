@@ -10,10 +10,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE. See the included LICENSE file for details.
 
 import pandas as pd
-import numpy as np
-import math
 import os
-import re
 
 def collect_information(bin_precision,bin_width,percent,cut,keep_best):
 	folder='mass_align_all'
@@ -28,7 +25,6 @@ def collect_information(bin_precision,bin_width,percent,cut,keep_best):
 	total_number=len(os.listdir(folder))
 	n=0
 	m=0
-	k=1
 	for file in os.listdir(folder):
 		n=n+1
 		m=m+1
@@ -59,12 +55,13 @@ def collect_information(bin_precision,bin_width,percent,cut,keep_best):
 		decoy_number=decoy_number+1
 		total_number=index+1
 		this_adj_score=df_decoy.loc[index]['adj_score']
+		if total_number<1000:
+			continue
 		FDR=decoy_number/(total_number-decoy_number)
 		if FDR>cut and total_number>1000:
 			break
 	df_target=df[(df['sample']!='decoy_sample_1')&(df['sample']!='decoy_sample_2')]
 	df_target=df_target[df_target['adj_score']>this_adj_score]
-	sample_number=len(df_target['sample'].value_counts())
 	
 	
 	grouped=df_target.groupby('group')

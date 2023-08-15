@@ -19,7 +19,7 @@ import argparse
 import shutil
 import os
 
-def run(method,file_dir,sample_file,processing_number=1,percent=0,time_window=1,bin_width=0.03,bin_precision=2,dict_size=1024,min_time_diff=0,max_time=5,max_log_intensity=3,disk_mode=0,keep_temp=0,begin_step=1,fdr=0.01,mz_col=0,rt_col=1,intensity_col=2,charge_col=3,keep_best=1):
+def run(method,file_dir,sample_file,processing_number=1,percent=0,time_window=1,bin_width=0.03,bin_precision=2,dict_size=1024,min_time_diff=0,max_mz=20,max_time=5,max_log_intensity=3,disk_mode=0,keep_temp=0,begin_step=1,fdr=0.01,mz_col=0,rt_col=1,intensity_col=2,charge_col=3,keep_best=1):
 	if disk_mode==0:
 		if method=='Dinosaur':
 			import deeprtalign.pre_step_no_disk.dinosaur_no_disk
@@ -57,10 +57,10 @@ def run(method,file_dir,sample_file,processing_number=1,percent=0,time_window=1,
 		
 		if processing_number>1:
 			from deeprtalign import mass_alignment_samples_multi_no_disk
-			result=mass_alignment_samples_multi_no_disk.run_alignment(processing_number,max_time,max_log_intensity,percent,total_fraction_number,total_sample_number,result)
+			result=mass_alignment_samples_multi_no_disk.run_alignment(processing_number,max_mz,max_time,max_log_intensity,percent,total_fraction_number,total_sample_number,result)
 		else:
 			from deeprtalign import mass_alignment_samples_no_disk
-			result=mass_alignment_samples_no_disk.run_alignment(max_time,max_log_intensity,percent,total_fraction_number,total_sample_number,result)
+			result=mass_alignment_samples_no_disk.run_alignment(max_mz,max_time,max_log_intensity,percent,total_fraction_number,total_sample_number,result)
 		
 		collect_mass_alignment_no_disk.collect_information(bin_precision,bin_width,percent,result,fdr,keep_best)
 		
@@ -116,10 +116,10 @@ def run(method,file_dir,sample_file,processing_number=1,percent=0,time_window=1,
 		if begin_step<=5:
 			if processing_number>1:
 				from deeprtalign import mass_alignment_samples_multi
-				mass_alignment_samples_multi.run_alignment(processing_number,max_time,max_log_intensity,percent)
+				mass_alignment_samples_multi.run_alignment(processing_number,max_mz,max_time,max_log_intensity,percent)
 			else:
 				from deeprtalign import mass_alignment_samples
-				mass_alignment_samples.run_alignment(max_time,max_log_intensity,percent)
+				mass_alignment_samples.run_alignment(max_mz,max_time,max_log_intensity,percent)
 		if begin_step<=6:
 			collect_mass_alignment.collect_information(bin_precision,bin_width,percent,fdr,keep_best)
 		if keep_temp==0:
@@ -141,20 +141,21 @@ def get_arg_and_run():
 	parser.add_argument('--bin_width', '-bw', type=float, help='the bin width, choose according to the feature extraction step', default=0.03)
 	parser.add_argument('--bin_precision', '-bp', type=int, help='the decimal place of bins, choose according to the feature extraction step', default=2)
 	parser.add_argument('--dict_size', '-ds', type=int, help='the dict size, choose according to the memory size', default=1024)
-	parser.add_argument('--min_time_diff', '-mtd', type=float, help='min, the time window used to filter the XIC, only keep the highest XIC', default=0)
-	parser.add_argument('--max_time', '-mt', type=float, help='min, the time threshold used to filter the XIC, only align XICs within the threshold', default=5)
-	parser.add_argument('--max_log_intensity', '-mli', type=float, help='log2 intensity value, the intensity threshold used to filter the XIC, only align XICs within the threshold', default=3)
+	parser.add_argument('--min_time_diff', '-mtd', type=float, help='min, the time window used to filter the features, only keep the highest feature', default=0)
+	parser.add_argument('--max_mz', '-mm', type=float, help='ppm, the m/z threshold used to filter the features, only align features within the threshold', default=20)
+	parser.add_argument('--max_time', '-mt', type=float, help='min, the time threshold used to filter the features, only align features within the threshold', default=5)
+	parser.add_argument('--max_log_intensity', '-mli', type=float, help='log2 intensity value, the intensity threshold used to filter the features, only align features within the threshold', default=3)
 	parser.add_argument('--disk_mode', '-dm', type=int, help='if use disk mode,disk mode is slower, but can keep the temp files, 0 do not use disk mode, 1 use disk mode', default=0)
 	parser.add_argument('--keep_temp', '-kt', type=int, help='if keep the temp files, 0 remove, 1 keep', default=0)
 	parser.add_argument('--begin_step', '-bs', type=int, help='begin from any step', default=1)
 	parser.add_argument('--fdr', '-fd', type=float, help='the FDR cutoff', default=0.01)
-	parser.add_argument('--mz_col', '-mz', type=int, help='mz column location, count from 1, for TXT or CSV method', default=0)
+	parser.add_argument('--mz_col', '-mz', type=int, help='m/z column location, count from 1, for TXT or CSV method', default=0)
 	parser.add_argument('--rt_col', '-rt', type=int, help='rt column location, count from 1, for TXT or CSV method', default=1)
 	parser.add_argument('--intensity_col', '-int', type=int, help='intensity column location, count from 1, for TXT or CSV method', default=2)
 	parser.add_argument('--charge_col', '-cha', type=int, help='charge column location, count from 1, for TXT or CSV method', default=3)
 	parser.add_argument('--keep_best', '-kb', type=int, help='0 keep all the candidate results, 1 only keep the best result for each feature', default=1)
 	args = parser.parse_args()
-	run(args.method,args.file_dir,args.sample_file,args.processing_number,args.percent,args.time_window,args.bin_width,args.bin_precision,args.dict_size,args.min_time_diff,args.max_time,args.max_log_intensity,args.disk_mode,args.keep_temp,args.begin_step,args.fdr,args.mz_col,args.rt_col,args.intensity_col,args.charge_col,args.keep_best)
+	run(args.method,args.file_dir,args.sample_file,args.processing_number,args.percent,args.time_window,args.bin_width,args.bin_precision,args.dict_size,args.min_time_diff,args.max_mz,args.max_time,args.max_log_intensity,args.disk_mode,args.keep_temp,args.begin_step,args.fdr,args.mz_col,args.rt_col,args.intensity_col,args.charge_col,args.keep_best)
 
 
 parser = argparse.ArgumentParser()
@@ -167,14 +168,15 @@ parser.add_argument('--time_window', '-tw', type=float, help='min, the time wind
 parser.add_argument('--bin_width', '-bw', type=float, help='the bin width, choose according to the feature extraction step', default=0.03)
 parser.add_argument('--bin_precision', '-bp', type=int, help='the decimal place of bins, choose according to the feature extraction step', default=2)
 parser.add_argument('--dict_size', '-ds', type=int, help='the dict size, choose according to the memory size', default=1024)
-parser.add_argument('--min_time_diff', '-mtd', type=float, help='min, the time window used to filter the XIC, only keep the highest XIC', default=0)
-parser.add_argument('--max_time', '-mt', type=float, help='min, the time threshold used to filter the XIC, only align XICs within the threshold', default=5)
-parser.add_argument('--max_log_intensity', '-mli', type=float, help='log2 intensity value, the intensity threshold used to filter the XIC, only align XICs within the threshold', default=3)
+parser.add_argument('--min_time_diff', '-mtd', type=float, help='min, the time window used to filter the features, only keep the highest feature', default=0)
+parser.add_argument('--max_mz', '-mm', type=float, help='ppm, the m/z threshold used to filter the features, only align features within the threshold', default=20)
+parser.add_argument('--max_time', '-mt', type=float, help='min, the time threshold used to filter the features, only align features within the threshold', default=5)
+parser.add_argument('--max_log_intensity', '-mli', type=float, help='log2 intensity value, the intensity threshold used to filter the features, only align features within the threshold', default=3)
 parser.add_argument('--disk_mode', '-dm', type=int, help='if use disk mode,disk mode is slower, but can keep the temp files, 0 do not use disk mode, 1 use disk mode', default=0)
 parser.add_argument('--keep_temp', '-kt', type=int, help='if keep the temp files, 0 remove, 1 keep', default=0)
 parser.add_argument('--begin_step', '-bs', type=int, help='begin from any step', default=1)
 parser.add_argument('--fdr', '-fd', type=float, help='the FDR cutoff', default=0.01)
-parser.add_argument('--mz_col', '-mz', type=int, help='mz column location, count from 1, for TXT or CSV method', default=0)
+parser.add_argument('--mz_col', '-mz', type=int, help='m/z column location, count from 1, for TXT or CSV method', default=0)
 parser.add_argument('--rt_col', '-rt', type=int, help='rt column location, count from 1, for TXT or CSV method', default=1)
 parser.add_argument('--intensity_col', '-int', type=int, help='intensity column location, count from 1, for TXT or CSV method', default=2)
 parser.add_argument('--charge_col', '-cha', type=int, help='charge column location, count from 1, for TXT or CSV method', default=3)
@@ -182,4 +184,4 @@ parser.add_argument('--keep_best', '-kb', type=int, help='0 keep all the candida
 args = parser.parse_args()
 	
 if __name__ == '__main__':
-	run(args.method,args.file_dir,args.sample_file,args.processing_number,args.percent,args.time_window,args.bin_width,args.bin_precision,args.dict_size,args.min_time_diff,args.max_time,args.max_log_intensity,args.disk_mode,args.keep_temp,args.begin_step,args.fdr,args.mz_col,args.rt_col,args.intensity_col,args.charge_col,args.keep_best)
+	run(args.method,args.file_dir,args.sample_file,args.processing_number,args.percent,args.time_window,args.bin_width,args.bin_precision,args.dict_size,args.min_time_diff,args.max_mz,args.max_time,args.max_log_intensity,args.disk_mode,args.keep_temp,args.begin_step,args.fdr,args.mz_col,args.rt_col,args.intensity_col,args.charge_col,args.keep_best)

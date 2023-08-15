@@ -47,7 +47,7 @@ class MatchingNetwork(nn.Module):
 		
 		return output
 
-def mass_alignment(mass_name,mass_df,total_fraction_number,total_sample_number,max_time,max_log_intensity,percent):
+def mass_alignment(mass_name,mass_df,total_fraction_number,total_sample_number,max_mz,max_time,max_log_intensity,percent):
 	pd.set_option('mode.chained_assignment', None)
 	result={}
 
@@ -81,7 +81,7 @@ def mass_alignment(mass_name,mass_df,total_fraction_number,total_sample_number,m
 	mass_df_decoy.loc[:,'mz_error']=-1
 	mass_df_decoy.loc[:,'score']=0
 	
-	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(mass_name,mass_df,max_time,max_log_intensity)
+	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(mass_name,mass_df,max_mz,max_time,max_log_intensity)
 
 	for group in aligned_result.index:
 		for sample in list(aligned_result.columns):
@@ -98,7 +98,7 @@ def mass_alignment(mass_name,mass_df,total_fraction_number,total_sample_number,m
 	
 	#sample_list=mass_df_decoy[['sample','fraction']].value_counts()
 	
-	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(mass_name,mass_df_decoy,max_time,max_log_intensity)
+	aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(mass_name,mass_df_decoy,max_mz,max_time,max_log_intensity)
 
 	for group in aligned_result.index:
 		for sample in list(aligned_result.columns):
@@ -137,7 +137,7 @@ def mass_alignment(mass_name,mass_df,total_fraction_number,total_sample_number,m
 	result[mass_name]=mass_df
 	return result
 
-def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
+def get_aligned_result(mass_name,mass_df,max_mz,max_time,max_log_intensity):
 	pd.set_option('mode.chained_assignment', None)
 	params_file = pkg_resources.resource_filename('deeprtalign', 'data/params.pt')
 	net = MatchingNetwork()
@@ -179,6 +179,7 @@ def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 		n=0
 		while n<len(group):
 			sample_n=group.iloc[n]['sample']
+			mz_n=group.iloc[n]['Tmz']
 			time_n=group.iloc[n]['Ttime']
 			intensity_n=group.iloc[n]['Tintensity']
 			begin_index=group.iloc[[n]].index[0]
@@ -189,6 +190,7 @@ def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 			m=n+1
 			while m<len(group):
 				sample_m=group.iloc[m]['sample']
+				mz_m=group.iloc[m]['Tmz']
 				time_m=group.iloc[m]['Ttime']
 				intensity_m=group.iloc[m]['Tintensity']
 				if sample_n==sample_m:
@@ -199,11 +201,14 @@ def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 				if abs(intensity_m-intensity_n)>max_log_intensity:
 					m=m+1
 					continue
+				if abs((mz_n-mz_m)/mz_m*1000000)>max_mz:
+					m=m+1
+					continue
 				next_index=group.iloc[[m]].index[0]
 				next_sample_df=sample_group_dic[sample_m+'_'+str(name[0])+'_'+str(name[1])]
 				k=next_sample_df.index.get_loc(next_index)
 				next_sample_mass_df=next_sample_df.iloc[k-2:k+3]
-				matrix,score_result=get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension,max_time,max_log_intensity)
+				matrix,score_result=get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension)
 				m=m+1
 			n=n+1
 	aligned_result=pd.DataFrame()
@@ -371,7 +376,7 @@ def get_aligned_result(mass_name,mass_df,max_time,max_log_intensity):
 
 
 
-def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension,max_time,max_log_intensity):
+def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension):
 	pd.set_option('mode.chained_assignment', None)
 	begin_sample=begin_sample_mass_df.iloc[2]['sample']
 	next_sample=next_sample_mass_df.iloc[2]['sample']
@@ -416,7 +421,7 @@ def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_resul
 
 
 	
-def run_alignment(processing_number,max_time,max_log_intensity,percent,total_fraction_number,total_sample_number,pre_result):
+def run_alignment(processing_number,max_mz,max_time,max_log_intensity,percent,total_fraction_number,total_sample_number,pre_result):
 	pd.set_option('mode.chained_assignment', None)
 	pool_arg=[]
 	for mass_name in pre_result.keys():
@@ -426,6 +431,7 @@ def run_alignment(processing_number,max_time,max_log_intensity,percent,total_fra
 		file_arg.append(mass_df)
 		file_arg.append(total_fraction_number)
 		file_arg.append(total_sample_number)
+		file_arg.append(max_mz)
 		file_arg.append(max_time)
 		file_arg.append(max_log_intensity)
 		file_arg.append(percent)
