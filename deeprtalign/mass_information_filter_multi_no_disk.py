@@ -12,6 +12,7 @@
 import pandas as pd
 import multiprocessing as mp
 import os
+import platform
 
 def mass_filter(mass_name,df,min_time_diff):
 	result={}
@@ -35,6 +36,10 @@ def mass_filter(mass_name,df,min_time_diff):
 	result[mass_name]=df
 	return result
 def run_mass_filter(processing_number,min_time_diff,pre_result):
+	if processing_number==-1:
+		processing_number=mp.cpu_count()
+	if platform.system().lower()=='windows' and processing_number>60:
+		processing_number=60
 	pool_arg=[]
 	for mass_name in pre_result.keys():
 		df=pre_result[mass_name]

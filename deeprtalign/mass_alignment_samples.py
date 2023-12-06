@@ -43,7 +43,8 @@ class MatchingNetwork(nn.Module):
 		
 		return output
 
-def mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_number,max_mz,max_time,max_log_intensity,percent,done_mass_folder):
+def mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_number,max_mz,max_time,max_log_intensity,percent,done_mass_folder,max_sample_number):
+	pd.set_option('mode.chained_assignment', None)
 	if not os.path.exists(result_folder):
 		os.mkdir(result_folder)
 	
@@ -56,89 +57,38 @@ def mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_
 		
 		sample_fraction_list=mass_df[['sample','fraction']].value_counts()
 		if len(sample_fraction_list)<(total_sample_number*total_fraction_number*percent):
+			shutil.move(mass_folder+'/'+file, done_mass_folder)
 			continue
 		
-		sample_list=mass_df[['sample']].value_counts()
-		
+		sample_list=mass_df['sample'].value_counts().index.tolist()
+		if len(sample_list)<2:
+			shutil.move(mass_folder+'/'+file, done_mass_folder)
+			return 0
 		mass_df.sort_values(by='Ttime',ascending=False,inplace=True)
-		r_n_1=random.randint(0, len(sample_list)-1)
-		sample_decoy_1=sample_list.index[r_n_1][0]
-		mass_df_decoy_1=mass_df[mass_df['sample']==sample_decoy_1].copy()
-		mass_df_decoy_1.loc[:,'sample']='decoy_sample_1'
-		mass_df_decoy_1.loc[:,'Ttime']=mass_df_decoy_1['Ttime'].apply(lambda x: 40-x if x<40 else 120-x)
-		mass_df_decoy_1.loc[:,'Ttime']=mass_df_decoy_1['Ttime'].apply(lambda x: 80-x)
-		sample_decoy_2=sample_list.index[r_n_1][0]
-		mass_df_decoy_2=mass_df[mass_df['sample']==sample_decoy_2].copy()
-		mass_df_decoy_2.loc[:,'sample']='decoy_sample_2'
-		mass_df_decoy=pd.concat([mass_df_decoy_1,mass_df_decoy_2],ignore_index=True)
+		score_result=get_aligned_result(file,mass_df,max_mz,max_time,max_log_intensity,max_sample_number)
+		score_result_decoy_all=pd.DataFrame()
+		for sample_decoy in sample_list:
+			sample_decoy_1=sample_decoy
+			mass_df_decoy_1=mass_df[mass_df['sample']==sample_decoy_1].copy()
+			mass_df_decoy_1.loc[:,'sample']='decoy_sample_1'
+			mass_df_decoy_1.loc[:,'Ttime']=mass_df_decoy_1['Ttime'].apply(lambda x: 40-x if x<40 else 120-x)
+			mass_df_decoy_1.loc[:,'Ttime']=mass_df_decoy_1['Ttime'].apply(lambda x: 80-x)
+			sample_decoy_2=sample_decoy
+			mass_df_decoy_2=mass_df[mass_df['sample']==sample_decoy_2].copy()
+			mass_df_decoy_2.loc[:,'sample']='decoy_sample_2'
+			mass_df_decoy=pd.concat([mass_df_decoy_1,mass_df_decoy_2],ignore_index=True)
+			score_result_decoy=get_aligned_result(file,mass_df_decoy,max_mz,max_time,max_log_intensity,max_sample_number)
+			if len(score_result_decoy_all)==0:
+				score_result_decoy_all=score_result_decoy
+			else:
+				score_result_decoy_all=pd.concat([score_result_decoy_all,score_result_decoy],ignore_index=True)
 		
-		mass_df.loc[:,'status']='unuse'
-		mass_df.loc[:,'group']=-1
-		mass_df.loc[:,'mz_error']=-1
-		mass_df.loc[:,'score']=0
-		
-		mass_df_decoy.loc[:,'status']='unuse'
-		mass_df_decoy.loc[:,'group']=-1
-		mass_df_decoy.loc[:,'mz_error']=-1
-		mass_df_decoy.loc[:,'score']=0
-		
-		aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df,max_mz,max_time,max_log_intensity)
-	
-		for group in aligned_result.index:
-			for sample in list(aligned_result.columns):
-				sample_index=aligned_result.loc[group][sample]
-				score=aligned_result_score.loc[group][sample]
-				mz_error=aligned_result_mz_error.loc[group][sample]
-				if np.isnan(sample_index):
-					continue
-				mass_df.loc[sample_index,'group']=group
-				mass_df.loc[sample_index,'status']='use'
-				mass_df.loc[sample_index,'score']=score
-				mass_df.loc[sample_index,'mz_error']=mz_error
-		
-		
-		#sample_list=mass_df_decoy[['sample','fraction']].value_counts()
-		
-		aligned_result,aligned_result_score,aligned_result_mz_error=get_aligned_result(file,mass_df_decoy,max_mz,max_time,max_log_intensity)
-	
-		for group in aligned_result.index:
-			for sample in list(aligned_result.columns):
-				sample_index=aligned_result.loc[group][sample]
-				score=aligned_result_score.loc[group][sample]
-				mz_error=aligned_result_mz_error.loc[group][sample]
-				if np.isnan(sample_index):
-					continue
-				mass_df_decoy.loc[sample_index,'group']=group
-				mass_df_decoy.loc[sample_index,'status']='use'
-				mass_df_decoy.loc[sample_index,'score']=score
-				mass_df_decoy.loc[sample_index,'mz_error']=mz_error
-		
-		mass_df=pd.concat([mass_df,mass_df_decoy],ignore_index=True)
-		mass_df.sort_values(by='Ttime',ascending=True,inplace=True)
-		grouped=mass_df.groupby('sample')
-		for sample,mass_df_sample in grouped:
-			n=0
-			while n<len(mass_df_sample):
-				status=mass_df_sample.iloc[n]['status']
-				if status=='unuse':
-					n=n+1
-					continue
-				index=mass_df_sample.iloc[[n]].index[0]
-				scores=[]
-				for m in range(n-2,n+3):
-					if m<0 or m>=len(mass_df_sample):
-						scores.append(0)
-					else:
-						score=mass_df_sample.iloc[m]['score']
-						if m==n:
-							score=6*score
-						scores.append(score)
-				mass_df.loc[index,'adj_score']=np.mean(scores)
-				n=n+1
-		mass_df.to_csv(result_folder+'/'+file,index=False)
+		score_result=pd.concat([score_result,score_result_decoy_all],ignore_index=True)
+		if len(score_result)>0:
+			score_result.to_csv(result_folder+'/'+file,index=False)
 		shutil.move(mass_folder+'/'+file, done_mass_folder)
 		
-def get_aligned_result(mass_name,mass_df,max_mz,max_time,max_log_intensity):
+def get_aligned_result(mass_name,mass_df,max_mz,max_time,max_log_intensity,max_sample_number):
 	pd.set_option('mode.chained_assignment', None)
 	params_file = pkg_resources.resource_filename('deeprtalign', 'data/params.pt')
 	net = MatchingNetwork()
@@ -189,20 +139,21 @@ def get_aligned_result(mass_name,mass_df,max_mz,max_time,max_log_intensity):
 			begin_sample_mass_df=begin_sample_df.iloc[j-2:j+3]
 			
 			m=n+1
+			valid=0
 			while m<len(group):
-				sample_m=group.iloc[m]['sample']
-				mz_m=group.iloc[m]['Tmz']
 				time_m=group.iloc[m]['Ttime']
-				intensity_m=group.iloc[m]['Tintensity']
+				if abs(time_m-time_n)>max_time:
+					break
+				sample_m=group.iloc[m]['sample']
 				if sample_n==sample_m:
 					m=m+1
 					continue
-				if abs(time_m-time_n)>max_time:
-					break
-				if abs(intensity_m-intensity_n)>max_log_intensity:
+				mz_m=group.iloc[m]['Tmz']
+				if abs((mz_n-mz_m)/mz_m*1000000)>max_mz:
 					m=m+1
 					continue
-				if abs((mz_n-mz_m)/mz_m*1000000)>max_mz:
+				intensity_m=group.iloc[m]['Tintensity']
+				if abs(intensity_m-intensity_n)>max_log_intensity:
 					m=m+1
 					continue
 				next_index=group.iloc[[m]].index[0]
@@ -211,169 +162,21 @@ def get_aligned_result(mass_name,mass_df,max_mz,max_time,max_log_intensity):
 				next_sample_mass_df=next_sample_df.iloc[k-2:k+3]
 				matrix,score_result=get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_result,dimension)
 				m=m+1
+				valid=valid+1
+				if (not max_sample_number==-1) and (valid>=max_sample_number):
+					break
 			n=n+1
-	aligned_result=pd.DataFrame()
-	aligned_result_score=pd.DataFrame()
-	aligned_result_mz_error=pd.DataFrame()
+	score_result=pd.DataFrame(score_result)
 	if len(matrix)==0:
-		return aligned_result,aligned_result_score,aligned_result_mz_error
+		return score_result
 	matrix=torch.tensor(matrix,dtype=torch.float32)
 	output=net(matrix)
-	score_result=pd.DataFrame(score_result)
 	output=output.view([len(score_result)])
 	score=1-output.detach().numpy()
 	score_result.loc[:,'score']=score
-	#score_result_target=score_result[score_result['score']>0.5]
-	score_result_target=score_result
-	score_result_target.sort_values(by='Ttime_diff',ascending=True,inplace=True,ignore_index=True)
-	score_result_target.sort_values(by='score',ascending=False,inplace=False,ignore_index=True)
-	group_num=0
+	score_result.loc[:,'mass_name']=mass_name
 	
-
-	for index in score_result_target.index:
-		score=score_result_target.loc[index]['score']
-		mz_error=score_result_target.loc[index]['mz_error']
-		sample_1_index=score_result_target.loc[index]['sample_1_index']
-		sample_2_index=score_result_target.loc[index]['sample_2_index']
-		sample_1=score_result_target.loc[index]['sample_1']
-		sample_2=score_result_target.loc[index]['sample_2']
-		aligned_result.loc[group_num,sample_1]=sample_1_index
-		aligned_result.loc[group_num,sample_2]=sample_2_index
-		aligned_result_score.loc[group_num,sample_1]=score
-		aligned_result_score.loc[group_num,sample_2]=score
-		aligned_result_mz_error.loc[group_num,sample_1]=mz_error
-		aligned_result_mz_error.loc[group_num,sample_2]=mz_error
-		group_num=group_num+1
-	
-	total_number=len(aligned_result)-1
-	
-	index=1
-	while index<total_number:
-		best_index=index
-		for sample in list(aligned_result.loc[[index]].notnull().columns):
-			sample_index=aligned_result.loc[index][sample]
-			if sample_index in list(aligned_result[sample])[0:index]:
-				group_index=aligned_result[aligned_result[sample]==sample_index].iloc[[0]].index[0]
-				if group_index<best_index:
-					best_index=group_index
-		if best_index<index:
-			for sample in list(aligned_result.columns):
-					sample_index=aligned_result.loc[index][sample]
-					score=aligned_result_score.loc[index][sample]
-					mz_error=aligned_result_mz_error.loc[index][sample]
-					if np.isnan(sample_index):
-						continue
-					if np.isnan(aligned_result.loc[best_index][sample]):
-						aligned_result.loc[group_index,sample]=sample_index
-						aligned_result_score.loc[group_index,sample]=score
-						aligned_result_mz_error.loc[group_index,sample]=mz_error
-			aligned_result.drop(index,axis=0,inplace=True)
-			aligned_result_score.drop(index,axis=0,inplace=True)
-			aligned_result_mz_error.drop(index,axis=0,inplace=True)
-		index=index+1
-	aligned_result.reset_index(inplace=True,drop=True)
-	aligned_result_score.reset_index(inplace=True,drop=True)
-	aligned_result_mz_error.reset_index(inplace=True,drop=True)
-	
-	total_number=len(aligned_result)-1
-	
-	index=1
-	while index<total_number:
-		best_index=index
-		for sample in list(aligned_result.loc[[index]].notnull().columns):
-			sample_index=aligned_result.loc[index][sample]
-			if sample_index in list(aligned_result[sample])[0:index]:
-				group_index=aligned_result[aligned_result[sample]==sample_index].iloc[[0]].index[0]
-				if group_index<best_index:
-					best_index=group_index
-		if best_index<index:
-			for sample in list(aligned_result.columns):
-					sample_index=aligned_result.loc[index][sample]
-					score=aligned_result_score.loc[index][sample]
-					mz_error=aligned_result_mz_error.loc[index][sample]
-					if np.isnan(sample_index):
-						continue
-					if np.isnan(aligned_result.loc[best_index][sample]):
-						aligned_result.loc[best_index,sample]=sample_index
-						aligned_result_score.loc[best_index,sample]=score
-						aligned_result_mz_error.loc[best_index,sample]=mz_error
-						aligned_result.loc[index,sample]=np.nan
-						aligned_result_score.loc[index,sample]=np.nan
-						aligned_result_mz_error.loc[index,sample]=np.nan
-						if aligned_result.loc[[index]].notnull().count().sum()<2:
-							aligned_result.drop(index,axis=0,inplace=True)
-							aligned_result_score.drop(index,axis=0,inplace=True)
-							aligned_result_mz_error.drop(index,axis=0,inplace=True)
-						continue
-					if aligned_result.loc[best_index][sample]==sample_index:
-						aligned_result.loc[index,sample]=np.nan
-						aligned_result_score.loc[index,sample]=np.nan
-						aligned_result_mz_error.loc[index,sample]=np.nan
-						if aligned_result.loc[[index]].notnull().count().sum()<2:
-							aligned_result.drop(index,axis=0,inplace=True)
-							aligned_result_score.drop(index,axis=0,inplace=True)
-							aligned_result_mz_error.drop(index,axis=0,inplace=True)
-						continue
-		index=index+1
-	aligned_result.dropna(how='all',inplace=True)
-	aligned_result_score.dropna(how='all',inplace=True)
-	aligned_result_mz_error.dropna(how='all',inplace=True)
-	aligned_result.reset_index(inplace=True,drop=True)
-	aligned_result_score.reset_index(inplace=True,drop=True)
-	aligned_result_mz_error.reset_index(inplace=True,drop=True)
-	
-	total_number=len(aligned_result)-1
-	
-	index=1
-	while index<total_number:
-		best_index=index
-		for sample in list(aligned_result.loc[[index]].notnull().columns):
-			sample_index=aligned_result.loc[index][sample]
-			if sample_index in list(aligned_result[sample])[0:index]:
-				group_index=aligned_result[aligned_result[sample]==sample_index].iloc[[0]].index[0]
-				if group_index<best_index:
-					best_index=group_index
-		if best_index<index:
-			for sample in list(aligned_result.columns):
-					sample_index=aligned_result.loc[index][sample]
-					score=aligned_result_score.loc[index][sample]
-					mz_error=aligned_result_mz_error.loc[index][sample]
-					if np.isnan(sample_index):
-						continue
-					if np.isnan(aligned_result.loc[best_index][sample]):
-						aligned_result.loc[best_index,sample]=sample_index
-						aligned_result_score.loc[best_index,sample]=score
-						aligned_result_mz_error.loc[best_index,sample]=mz_error
-						aligned_result.loc[index,sample]=np.nan
-						aligned_result_score.loc[index,sample]=np.nan
-						aligned_result_mz_error.loc[index,sample]=np.nan
-						if aligned_result.loc[[index]].notnull().count().sum()<2:
-							aligned_result.drop(index,axis=0,inplace=True)
-							aligned_result_score.drop(index,axis=0,inplace=True)
-							aligned_result_mz_error.drop(index,axis=0,inplace=True)
-						continue
-					if aligned_result.loc[best_index][sample]==sample_index:
-						aligned_result.loc[index,sample]=np.nan
-						aligned_result_score.loc[index,sample]=np.nan
-						aligned_result_mz_error.loc[index,sample]=np.nan
-						if aligned_result.loc[[index]].notnull().count().sum()<2:
-							aligned_result.drop(index,axis=0,inplace=True)
-							aligned_result_score.drop(index,axis=0,inplace=True)
-							aligned_result_mz_error.drop(index,axis=0,inplace=True)
-						continue
-		index=index+1
-	aligned_result.dropna(how='all',inplace=True)
-	aligned_result_score.dropna(how='all',inplace=True)
-	aligned_result_mz_error.dropna(how='all',inplace=True)
-	aligned_result.reset_index(inplace=True,drop=True)
-	aligned_result_score.reset_index(inplace=True,drop=True)
-	aligned_result_mz_error.reset_index(inplace=True,drop=True)
-	
-	aligned_result.sort_index(ascending=False,inplace=True,ignore_index=True)
-	aligned_result_score.sort_index(ascending=False,inplace=True,ignore_index=True)
-	aligned_result_mz_error.sort_index(ascending=False,inplace=True,ignore_index=True)
-	
-	return aligned_result,aligned_result_score,aligned_result_mz_error
+	return score_result
 
 
 
@@ -421,7 +224,7 @@ def get_input_matrix(begin_sample_mass_df,next_sample_mass_df,matrix,score_resul
 	return matrix,score_result
 
 
-def run_alignment(max_mz,max_time,max_log_intensity,percent):
+def run_alignment(max_mz,max_time,max_log_intensity,percent,max_sample_number):
 	mass_folder='shift_result_bins_filter'
 	done_mass_folder='shift_result_bins_filter_done'
 	result_folder='mass_align_all'
@@ -436,4 +239,4 @@ def run_alignment(max_mz,max_time,max_log_intensity,percent):
 	if not os.path.exists(done_mass_folder):
 		os.mkdir(done_mass_folder)
 	
-	mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_number,max_mz,max_time,max_log_intensity,percent,done_mass_folder)
+	mass_alignment(mass_folder,result_folder,total_fraction_number,total_sample_number,max_mz,max_time,max_log_intensity,percent,done_mass_folder,max_sample_number)

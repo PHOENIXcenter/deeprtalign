@@ -12,6 +12,7 @@
 import pandas as pd
 import multiprocessing as mp
 import os
+import platform
 
 def mass_filter(file_dir,file,result_dir,min_time_diff):
 	df=pd.read_csv(file_dir+'/'+file,converters={'Tmass':str})
@@ -39,6 +40,11 @@ def run_mass_filter(processing_number,min_time_diff):
 	
 	if not os.path.exists(result_dir):
 		os.mkdir(result_dir)
+	
+	if processing_number==-1:
+		processing_number=mp.cpu_count()
+	if platform.system().lower()=='windows' and processing_number>60:
+		processing_number=60
 	
 	pool_arg=[]
 	for file in os.listdir(file_dir):
